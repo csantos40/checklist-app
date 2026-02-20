@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Aqui estamos criando a nossa tabela principal
+model ChecklistItem {
+  id          String   @id @default(uuid())
+  department  String
+  description String
+  periodicity String
+  status      String
+  observation String?  // O ponto de interrogação significa que não é obrigatório
+  createdAt   DateTime @default(now())
+}
