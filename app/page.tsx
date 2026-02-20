@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-// ========================================================
-// 1. DEFINIÇÃO DAS CREDENCIAIS (FORA DO ESCOPO PARA EVITAR ERRO)
-// ========================================================
-const DEPARTMENTS_CREDENTIALS: Record<string, string> = {
+// CREDENCIAIS UNIFICADAS
+const CREDENTIALS: Record<string, string> = {
+  'Diretoria': 'dir123',
   'Gerente': 'ger123',
   'SubGerente': 'sub123',
   'FLV': 'flv123',
@@ -171,146 +171,58 @@ const TASK_DATA: Record<string, any[]> = {
   ]
 };
 
-export default function Home() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [department, setDepartment] = useState('');
-  const [password, setPassword] = useState('');
-  const [currentPeriodicity, setCurrentPeriodicity] = useState('DIÁRIO');
-  const [tasks, setTasks] = useState<any[]>([]);
+export default function LoginPage() {
+  const [dept, setDept] = useState('Diretoria');
+  const [pass, setPass] = useState('');
+  const router = useRouter();
 
   const handleLogin = () => {
-    if (DEPARTMENTS_CREDENTIALS[department] === password) {
-      setIsAuthenticated(true);
+    // Verifica se a senha bate com o departamento selecionado
+    if (CREDENTIALS[dept] === pass) {
+      // REGRA DE REDIRECIONAMENTO:
+      // Se for gestão (Diretoria/Gerente), vai para o Dashboard
+      if (dept === 'Diretoria' || dept === 'Gerente') {
+        router.push('/dashboard');
+      } else {
+        // Se for operação, vai para o checklist do setor
+        router.push(`/checklist/${dept.toLowerCase().replace(/ /g, '-')}`);
+      }
     } else {
-      alert('Senha incorreta para o departamento selecionado!');
+      alert('Senha incorreta para este departamento!');
     }
   };
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      const sectorTasks = (TASK_DATA[department] || []).filter(t => t.periodicity === currentPeriodicity);
-      setTasks(sectorTasks.map(task => ({ ...task, status: 'Pendente', observation: '', photo: null })));
-    }
-  }, [isAuthenticated, department, currentPeriodicity]);
-
-  const updateTask = (idx: number, field: string, value: any) => {
-    const newTasks = [...tasks];
-    newTasks[idx] = { ...newTasks[idx], [field]: value };
-    setTasks(newTasks);
-  };
-
-  const handleFileChange = (idx: number, file: File | null) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => updateTask(idx, 'photo', reader.result);
-    reader.readAsDataURL(file);
-  };
-
-  const submitChecklist = async () => {
-    if (tasks.some(t => t.status === 'Pendente')) return alert('ERRO: Marque todos os itens!');
-    if (tasks.some(t => t.status === 'Não Conforme' && (t.observation.trim() === '' || !t.photo))) {
-      return alert('ERRO: Itens "Não Conforme" exigem Observação e FOTO REAL!');
-    }
-
-    const res = await fetch('/api/checklist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ departamento: department, tipo: currentPeriodicity, itens: tasks })
-    });
-
-    if (res.ok) {
-      alert(`Checklist enviado com sucesso!`);
-      window.location.reload();
-    }
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white w-full max-w-md p-8 rounded-[2.5rem] shadow-2xl">
-          <div className="text-center mb-10">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl font-black mx-auto mb-6 shadow-xl shadow-blue-500/20">✓</div>
-            <h1 className="text-2xl font-black uppercase tracking-tighter text-slate-800">Acesso Restrito</h1>
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mt-2 italic">Identifique o Departamento</p>
-          </div>
-          <div className="space-y-5">
-            <select 
-              className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:border-blue-600 transition-all cursor-pointer"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-            >
-              <option value="">Selecione o Setor</option>
-              {Object.keys(DEPARTMENTS_CREDENTIALS).map(dept => <option key={dept} value={dept}>{dept}</option>)}
-            </select>
-            <input 
-              type="password"
-              placeholder="Digite a Senha"
-              className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:border-blue-600 transition-all"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <button onClick={handleLogin} className="w-full bg-slate-900 hover:bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl transition-all active:scale-95 uppercase tracking-tighter italic">Entrar no Sistema</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-2 md:p-8 font-sans">
-      <div className="max-w-5xl mx-auto shadow-2xl rounded-[3rem] overflow-hidden bg-white">
-        <header className="bg-slate-900 p-8 text-white text-center border-b border-slate-800">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-black uppercase italic tracking-tighter">{department}</h1>
-            <button onClick={() => setIsAuthenticated(false)} className="bg-slate-800 px-4 py-2 rounded-xl text-[10px] font-black text-slate-400 hover:text-white transition-all shadow-md">SAIR</button>
-          </div>
-          <div className="flex gap-2 bg-slate-800 p-1.5 rounded-2xl max-w-sm mx-auto shadow-inner">
-            {['DIÁRIO', 'SEMANAL', 'MENSAL'].map(p => (
-              <button key={p} onClick={() => setCurrentPeriodicity(p)} className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${currentPeriodicity === p ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>{p}</button>
-            ))}
-          </div>
-        </header>
-
-        <main className="p-6 space-y-6 min-h-[500px]">
-          {tasks.map((task, idx) => (
-            <div key={idx} className={`p-6 rounded-[2.5rem] border-2 transition-all duration-300 ${
-              task.status === 'Não Conforme' ? 'border-red-200 bg-red-50/40 shadow-inner' : 
-              task.status === 'Conforme' ? 'border-green-100 bg-green-50/20 shadow-sm' : 
-              'border-slate-100 bg-slate-50'
-            }`}>
-              <div className="flex flex-col gap-6">
-                <div className="flex justify-between items-start gap-4">
-                  <p className="font-bold text-slate-800 text-lg flex-1 leading-tight">{task.description}</p>
-                  <div className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase border shadow-sm ${
-                    task.status === 'Pendente' ? 'bg-amber-100 text-amber-700 border-amber-200' : 
-                    task.status === 'Conforme' ? 'bg-green-100 text-green-700 border-green-200' : 
-                    'bg-red-100 text-red-700 border-red-200'
-                  }`}>{task.status}</div>
-                </div>
-
-                <div className="flex gap-4">
-                  <button onClick={() => updateTask(idx, 'status', 'Conforme')} className={`flex-1 py-5 rounded-2xl text-[10px] font-black transition-all border-2 ${task.status === 'Conforme' ? 'bg-green-600 text-white border-green-700 shadow-md scale-[1.02]' : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50 shadow-sm'}`}>CONFORME</button>
-                  <button onClick={() => updateTask(idx, 'status', 'Não Conforme')} className={`flex-1 py-5 rounded-2xl text-[10px] font-black transition-all border-2 ${task.status === 'Não Conforme' ? 'bg-red-600 text-white border-red-700 shadow-md scale-[1.02]' : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50 shadow-sm'}`}>NÃO CONFORME</button>
-                </div>
-
-                {task.status === 'Não Conforme' && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <textarea placeholder="Descreva o desvio detalhadamente (Obrigatório)..." className="w-full p-5 rounded-[2rem] border-2 border-red-200 outline-none focus:border-red-500 text-sm shadow-inner bg-white font-medium" value={task.observation} onChange={(e) => updateTask(idx, 'observation', e.target.value)} />
-                    <label className={`w-full flex flex-col items-center justify-center p-6 rounded-[2rem] border-2 border-dashed transition-all cursor-pointer ${!task.photo ? 'border-red-400 bg-red-50 animate-pulse' : 'border-green-500 bg-green-50'}`}>
-                      <span className="text-[11px] font-black text-slate-600 uppercase tracking-tighter">{task.photo ? '📸 Foto Registrada com Sucesso' : '📷 Abrir Câmera e Tirar Foto (Obrigatório)'}</span>
-                      <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleFileChange(idx, e.target.files?.[0] || null)} />
-                    </label>
-                  </div>
-                )}
-              </div>
-            </div>
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl text-center border-t-8 border-slate-700">
+        <div className="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white text-3xl mb-6 mx-auto shadow-xl font-black italic">V</div>
+        <h1 className="text-2xl font-black uppercase tracking-tighter text-slate-800 leading-none">Acesso Restrito</h1>
+        <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2 mb-8">Vivian Loja - Auditoria</p>
+        
+        <select 
+          className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 outline-none mb-4 appearance-none"
+          value={dept}
+          onChange={(e) => setDept(e.target.value)}
+        >
+          {Object.keys(CREDENTIALS).map(d => (
+            <option key={d} value={d}>{d}</option>
           ))}
-        </main>
+        </select>
 
-        <footer className="p-8 bg-slate-50 border-t border-slate-200 text-center">
-          <button onClick={submitChecklist} className="w-full bg-slate-900 hover:bg-blue-600 text-white font-black py-7 rounded-[2rem] shadow-xl transition-all active:scale-[0.98] uppercase tracking-tighter text-xl italic">Finalizar Checklist de {department}</button>
-          <p className="mt-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Sistema de Gestão Operacional Unidade</p>
-        </footer>
+        <input 
+          type="password" 
+          placeholder="Senha de Acesso" 
+          className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:border-slate-900 mb-6 text-center shadow-inner"
+          value={pass}
+          onChange={(e) => setPass(e.target.value)}
+        />
+
+        <button 
+          onClick={handleLogin}
+          className="w-full bg-slate-900 text-white font-black py-6 rounded-2xl shadow-xl active:scale-95 transition-all uppercase tracking-widest italic"
+        >
+          Entrar no Sistema
+        </button>
       </div>
     </div>
   );
