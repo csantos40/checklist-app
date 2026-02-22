@@ -153,7 +153,7 @@ export default function DashboardDefinitiva() {
             {userRole === 'gerente' && (
               <button onClick={() => router.push('/')} className="bg-indigo-600 text-white px-6 py-3 rounded-xl text-[9px] shadow-md hover:bg-indigo-700 transition-all font-black uppercase italic">📋 TAREFAS</button>
             )}
-            <button onClick={() => window.print()} className="bg-green-600 text-white px-6 py-3 rounded-xl text-[9px] shadow-md flex items-center gap-2 hover:bg-green-700 transition-all font-black uppercase italic">🖨️ GERAL</button>
+            <button onClick={() => window.print()} className="bg-green-600 text-white px-6 py-3 rounded-xl text-[9px] shadow-md flex items-center gap-2 hover:bg-green-700 transition-all font-black uppercase italic">🖨️ IMPRIMIR</button>
             <button onClick={handleLogout} className="bg-slate-900 text-white px-6 py-3 rounded-xl text-[9px] shadow-md font-black uppercase italic">SAIR</button>
           </div>
         </header>
