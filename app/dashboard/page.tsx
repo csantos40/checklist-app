@@ -20,7 +20,7 @@ export default function DashboardDefinitiva() {
     const authStatus = localStorage.getItem('user_auth');
     if (authStatus === 'direcao' || authStatus === 'rh' || authStatus === 'gerente') {
       setAuthorized(true);
-      setUserRole(authStatus); // 🚀 Salva o cargo (ex: 'gerente')
+      setUserRole(authStatus || ''); // 🚀 Salva o cargo (ex: 'gerente')
     } else {
       router.push('/gestao'); 
     }
@@ -36,8 +36,8 @@ export default function DashboardDefinitiva() {
     document.body.appendChild(script);
   }, [router]);
 
-  // 🚀 FUNÇÃO DE BUSCA ISOLADA PARA REUSO NO REALTIME
-  const fetchData = async (client) => {
+  // 🚀 CORREÇÃO 1: Adicionada tipagem ": any" para evitar erro na linha 40
+  const fetchData = async (client: any) => {
     if (!client) return;
     try {
       const { data } = await client
@@ -53,11 +53,10 @@ export default function DashboardDefinitiva() {
   useEffect(() => {
     if (!supabase || !authorized) return;
 
-    // Carga inicial de dados
     fetchData(supabase);
 
-    // Configura o canal para "escutar" mudanças na tabela 'respostas'
-    const channel = supabase
+    // 🚀 CORREÇÃO 2: Forçado tipo "(supabase as any)" para evitar erro na linha 59
+    const channel = (supabase as any)
       .channel('db_changes_vivian')
       .on(
         'postgres_changes',
@@ -69,13 +68,13 @@ export default function DashboardDefinitiva() {
       )
       .subscribe();
 
-    // Limpa a conexão ao sair da página
     return () => {
-      supabase.removeChannel(channel);
+      (supabase as any).removeChannel(channel);
     };
   }, [supabase, authorized]);
 
-  const calcularSLA = (dataCriacao) => {
+  // 🚀 CORREÇÃO 3: Tipagem básica de parâmetros
+  const calcularSLA = (dataCriacao: any) => {
     if (!dataCriacao) return 0;
     const hoje = new Date();
     const criacao = new Date(dataCriacao);
@@ -91,15 +90,15 @@ export default function DashboardDefinitiva() {
     else window.location.href = '/gestao';
   };
 
-  const filteredReports = reports.filter((r) => {
+  const filteredReports = reports.filter((r: any) => {
     const matchSector = selectedSector === 'TODOS' || r.setor === selectedSector;
     const matchStatus = statusFilter === 'TODOS' || r.status === statusFilter;
     const matchDate = !dateFilter || new Date(r.created_at).toLocaleDateString('en-CA') === dateFilter;
     return matchSector && matchStatus && matchDate;
   });
 
-  const conformesCount = filteredReports.filter(r => r.status === 'Conforme').length;
-  const naoConformesCount = filteredReports.filter(r => r.status === 'Não Conforme').length;
+  const conformesCount = filteredReports.filter((r: any) => r.status === 'Conforme').length;
+  const naoConformesCount = filteredReports.filter((r: any) => r.status === 'Não Conforme').length;
   const totalNoFiltro = filteredReports.length;
   const score = totalNoFiltro > 0 ? ((conformesCount / totalNoFiltro) * 100).toFixed(0) : 0;
 
@@ -108,7 +107,6 @@ export default function DashboardDefinitiva() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 font-sans uppercase italic font-black text-[#1E293B]">
       
-      {/* 🚀 CSS PARA ISOLAR A IMPRESSÃO DO RELATÓRIO INDIVIDUAL */}
       <style jsx global>{`
         @media print {
           body * { visibility: hidden; }
@@ -152,7 +150,6 @@ export default function DashboardDefinitiva() {
           </div>
 
           <div className="flex gap-2">
-            {/* 🚀 BOTÃO DE VOLTAR PARA TAREFAS - EXCLUSIVO PARA O GERENTE */}
             {userRole === 'gerente' && (
               <button onClick={() => router.push('/')} className="bg-indigo-600 text-white px-6 py-3 rounded-xl text-[9px] shadow-md hover:bg-indigo-700 transition-all font-black uppercase italic">📋 TAREFAS</button>
             )}
@@ -169,13 +166,12 @@ export default function DashboardDefinitiva() {
         </div>
 
         <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredReports.map((item, idx) => {
+          {filteredReports.map((item: any, idx: number) => {
             const diasAtraso = calcularSLA(item.created_at);
-            const fotos = item.foto_url ? String(item.foto_url).split(',').filter(f => f.trim().length > 5) : [];
+            const fotos = item.foto_url ? String(item.foto_url).split(',').filter((f: any) => f.trim().length > 5) : [];
             
             return (
               <div key={idx} onClick={() => setSelectedTask(item)} className={`bg-white p-5 rounded-[2.5rem] shadow-xl border-t-[8px] flex flex-col gap-4 transition-all cursor-pointer hover:scale-[1.02] ${item.status === 'Não Conforme' ? 'border-red-500' : 'border-green-500'}`}>
-                
                 <div className="w-full h-40 overflow-hidden rounded-xl bg-slate-100 relative">
                   {fotos.length > 0 ? (
                     <img src={fotos[0]} className="w-full h-full object-cover" />
@@ -222,20 +218,17 @@ export default function DashboardDefinitiva() {
         </main>
       </div>
 
-      {/* 🚀 MODAL DE ANÁLISE COM FUNÇÃO DE IMPRESSÃO INDIVIDUAL */}
       {selectedTask && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300 no-scrollbar overflow-y-auto">
           <div className="bg-white w-full max-w-4xl rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row relative animate-in zoom-in duration-300 printable-modal">
-            
-            {/* Botões do Modal (Não aparecem na impressão) */}
             <div className="absolute top-6 right-6 z-10 flex gap-2 no-print">
               <button onClick={() => window.print()} className="bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-black shadow-xl hover:bg-green-700 transition-all">🖨️</button>
               <button onClick={() => setSelectedTask(null)} className="bg-white text-[#1E293B] w-12 h-12 rounded-full flex items-center justify-center text-2xl font-black shadow-xl hover:bg-red-600 hover:text-white transition-all">✕</button>
             </div>
 
             <div className="md:w-1/2 h-[350px] md:h-auto bg-slate-200">
-              {selectedTask.foto_url && String(selectedTask.foto_url).length > 5 ? (
-                <img src={String(selectedTask.foto_url).split(',')[0]} className="w-full h-full object-cover" />
+              {(selectedTask as any).foto_url && String((selectedTask as any).foto_url).length > 5 ? (
+                <img src={String((selectedTask as any).foto_url).split(',')[0]} className="w-full h-full object-cover" />
               ) : (
                 <div className="flex items-center justify-center h-full text-slate-400 font-black italic uppercase">Imagem Não Registrada</div>
               )}
@@ -243,29 +236,28 @@ export default function DashboardDefinitiva() {
 
             <div className="md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white">
               <div className="mb-8 text-[#1E293B]">
-                <span className={`px-4 py-2 rounded-full text-[10px] font-black text-white ${selectedTask.status === 'Não Conforme' ? 'bg-red-600' : 'bg-green-600'}`}>
-                  {selectedTask.status}
+                <span className={`px-4 py-2 rounded-full text-[10px] font-black text-white ${(selectedTask as any).status === 'Não Conforme' ? 'bg-red-600' : 'bg-green-600'}`}>
+                  {(selectedTask as any).status}
                 </span>
-                <h2 className="text-2xl font-black leading-tight italic uppercase mt-4 text-[#1E293B]">{selectedTask.tarefa}</h2>
-                <p className="text-indigo-600 text-[10px] mt-4 font-black italic uppercase">{selectedTask.setor} • {new Date(selectedTask.created_at).toLocaleDateString()}</p>
+                <h2 className="text-2xl font-black leading-tight italic uppercase mt-4 text-[#1E293B]">{(selectedTask as any).tarefa}</h2>
+                <p className="text-indigo-600 text-[10px] mt-4 font-black italic uppercase">{(selectedTask as any).setor} • {new Date((selectedTask as any).created_at).toLocaleDateString()}</p>
               </div>
 
               <div className="space-y-4">
                 <div className="bg-red-50 p-6 rounded-[2rem] border-l-8 border-red-500">
                   <p className="text-[8px] text-red-600 mb-2 font-black uppercase italic">Análise do Problema:</p>
-                  <p className="text-sm font-bold italic text-slate-900 leading-relaxed uppercase">" {selectedTask.observacao || 'NÃO DESCRITO'} "</p>
+                  <p className="text-sm font-bold italic text-slate-900 leading-relaxed uppercase">" {(selectedTask as any).observacao || 'NÃO DESCRITO'} "</p>
                 </div>
 
-                {selectedTask.observacao_resolucao && (
+                {(selectedTask as any).observacao_resolucao && (
                   <div className="bg-green-50 p-6 rounded-[2rem] border-l-8 border-green-500">
                     <p className="text-[8px] text-green-600 mb-2 font-black uppercase italic">Tratativa de Resolução:</p>
-                    <p className="text-sm font-bold italic text-green-900 leading-relaxed uppercase">" {selectedTask.observacao_resolucao} "</p>
-                    <p className="text-[7px] text-green-500 mt-2 font-black italic">FINALIZADO EM: {new Date(selectedTask.resolvido_em).toLocaleString()}</p>
+                    <p className="text-sm font-bold italic text-green-900 leading-relaxed uppercase">" {(selectedTask as any).observacao_resolucao} "</p>
+                    <p className="text-[7px] text-green-500 mt-2 font-black italic">FINALIZADO EM: {new Date((selectedTask as any).resolvido_em).toLocaleString()}</p>
                   </div>
                 )}
               </div>
 
-              {/* 🚀 RODAPÉ DE ASSINATURA EXCLUSIVO PARA IMPRESSÃO */}
               <div className="mt-16 pt-8 border-t-2 border-slate-100 hidden print:block">
                 <div className="flex justify-between gap-10">
                    <div className="flex-1 border-t border-black text-center pt-2">
