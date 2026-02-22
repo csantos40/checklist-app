@@ -41,6 +41,15 @@ const TASK_DATA = {
     { description: 'DIA: Preparação para os festivais, degustações, ofertas do dia (cartazeamento, exposição)', periodicity: 'DIÁRIO' },
     { description: 'DIA: Acompanhar divergências no recebimento (quantidade e valor e após entender junto com o comercial e CPD loja os motivos para a correção.', periodicity: 'DIÁRIO' },
 
+    // SEMANAL
+    { description: 'SEMANAL: Toda sexta-feira: Definir ofertas do hortifruti', periodicity: 'SEMANAL' },
+    { description: 'SEMANAL: Validade dos produtos (lista dos itens com plano de ação)', periodicity: 'SEMANAL' },
+    { description: 'SEMANAL: Estoque - Troca - Extrato de movimentação, acompanhamento junto ao Cleber', periodicity: 'SEMANAL' },
+    { description: 'SEMANAL: SEXTA 14:00h- Comercial - Lista de produtos com validade curta 7 dias (trabalhar com plano de ação, rebaixe de preço, exposição, cartazeamento, estoques)', periodicity: 'SEMANAL' },
+    { description: 'SEMANAL: Acompanhar o despacho de osso', periodicity: 'SEMANAL' },
+    { description: 'SEMANAL: Comercial (Levar sugestões de ofertas agressivas ao comercial, como itens próximo de vencimento, levantar as informações ao repassar aos setores)', periodicity: 'SEMANAL' },
+
+
     // MENSAL / REUNIÕES
     { description: 'MENSAL: Reunião Gerente Geral com encarregados(as) e Subgerente', periodicity: 'MENSAL' },
     { description: 'MENSAL: Reunião Encarregados(as) com a sua equipe (falar dos pontos do mês que passou e plano de ação para o mês seguinte)', periodicity: 'MENSAL' },
@@ -48,15 +57,10 @@ const TASK_DATA = {
     { description: 'MENSAL: Perdas (top 5 perdas por setor e traçar plano de ação)', periodicity: 'MENSAL' },
     { description: 'MENSAL: Divergências no recebimento (Entender o motivo para resolução)', periodicity: 'MENSAL' },
     { description: 'MENSAL: Gerenciar produtos próximos do vencimento com exposição agressiva', periodicity: 'MENSAL' },
-    { description: 'SEMANAL: Estoque - Troca - Extrato de movimentação, acompanhamento junto ao Cleber', periodicity: 'SEMANAL' },
     { description: 'MENSAL: Acompanhar cotações', periodicity: 'DIÁRIO' },
-    { description: 'SEMANAL: Comercial (Levar sugestões de ofertas agressivas ao comercial, como itens próximo de vencimento, levantar as informações ao repassar aos setores)', periodicity: 'SEMANAL' },
-    { description: 'SEMANAL: SEXTA 14:00h- Comercial - Lista de produtos com validade curta 7 dias (trabalhar com plano de ação, rebaixe de preço, exposição, cartazeamento, estoques)', periodicity: 'SEMANAL' },
-    { description: 'MENSAL: Perdas e itens sem giro (Reunião com Prevenção - plano de ação)', periodicity: 'DIÁRIO' },
-    { description: 'MENSAL: Acompanhar o despacho de osso', periodicity: 'SEMANAL' },
     { description: 'MENSAL: Elaborar relatórios semanais das vendas das cotações', periodicity: 'MENSAL' },
-    { description: 'SEMANAL: Toda sexta-feira: Definir ofertas do hortifruti', periodicity: 'SEMANAL' },
-    { description: 'SEMANAL: Validade dos produtos (lista dos itens com plano de ação)', periodicity: 'SEMANAL' },
+    { description: 'MENSAL: Perdas e itens sem giro (Reunião com Prevenção - plano de ação)', periodicity: 'MENSAL' },
+    
   ],
   'SubGerente': [
     // VOLTA OLÍMPICA MANHÃ
