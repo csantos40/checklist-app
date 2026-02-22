@@ -18,10 +18,8 @@ export const metadata: Metadata = {
   description: "Sistema de monitoramento e auditoria - Supermercados Vivian",
   icons: {
     icon: [
-      { url: "/favicon.ico?v=3", href: "/favicon.ico?v=3" },
       { url: "/logo.png?v=3", href: "/logo.png?v=3" },
     ],
-    shortcut: "/favicon.ico?v=3",
     apple: "/logo.png?v=3",
   },
 };
