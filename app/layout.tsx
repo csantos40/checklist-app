@@ -12,15 +12,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// 🚀 ATUALIZAÇÃO: Forçando o navegador a reconhecer o novo ícone colorido (v=3)
 export const metadata: Metadata = {
   title: "Checklist Vivian",
   description: "Sistema de monitoramento e auditoria - Supermercados Vivian",
   icons: {
-    icon: [
-      { url: "/logo.png?v=3", href: "/logo.png?v=3" },
-    ],
-    apple: "/logo.png?v=3",
+    icon: "/icone-vivian.ico",
+    apple: "/icone-vivian.ico",
   },
 };
 
