@@ -15,10 +15,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Checklist Vivian",
   description: "Sistema de monitoramento e auditoria - Supermercados Vivian",
-  icons: {
-    icon: "/icone-vivian.ico",
-    apple: "/icone-vivian.ico",
-  },
 };
 
 export default function RootLayout({
