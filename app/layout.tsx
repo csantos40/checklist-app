@@ -12,14 +12,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// 🚀 ATUALIZAÇÃO: Agora o app usará o seu /logo.png como ícone (ícone colorido em vez do cinza)
+// 🚀 ATUALIZAÇÃO: Forçando o navegador a reconhecer o novo ícone colorido (v=3)
 export const metadata: Metadata = {
   title: "Checklist Vivian",
   description: "Sistema de monitoramento e auditoria - Supermercados Vivian",
   icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png", // Garante que no iPhone também apareça o seu logo
+    icon: [
+      { url: "/favicon.ico?v=3", href: "/favicon.ico?v=3" },
+      { url: "/logo.png?v=3", href: "/logo.png?v=3" },
+    ],
+    shortcut: "/favicon.ico?v=3",
+    apple: "/logo.png?v=3",
   },
 };
 
