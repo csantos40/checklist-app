@@ -12,12 +12,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// 🚀 ATUALIZAÇÃO: Nome do app e Ícone da aba
+// 🚀 ATUALIZAÇÃO: Agora o app usará o seu /logo.png como ícone (ícone colorido em vez do cinza)
 export const metadata: Metadata = {
   title: "Checklist Vivian",
   description: "Sistema de monitoramento e auditoria - Supermercados Vivian",
   icons: {
     icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png", // Garante que no iPhone também apareça o seu logo
   },
 };
 
