@@ -1,170 +1,287 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-const DEPARTMENTS_CREDENTIALS: Record<string, string> = {
-  'Diretoria': 'dir123', 
-  'Gerente': 'ger123',   
-  'SubGerente': 'sub123',
-  'FLV': 'flv123',
-  'Mercearia': 'mer123',
-  'FLC (Frios e Laticínios)': 'flc123'
-};
-
-export default function Dashboard() {
-  const [userRole, setUserRole] = useState<'NONE' | 'GERENTE' | 'DIRETORIA'>('NONE');
-  const [passInput, setPassInput] = useState('');
-  const [reports, setReports] = useState<any[]>([]);
+export default function DashboardDefinitiva() {
+  const [authorized, setAuthorized] = useState(false);
+  const [userRole, setUserRole] = useState(''); // 🚀 Identifica o cargo para o botão de volta
+  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showConfig, setShowConfig] = useState(false);
+  const [supabase, setSupabase] = useState(null);
+  const [selectedSector, setSelectedSector] = useState('TODOS'); 
+  const [statusFilter, setStatusFilter] = useState('TODOS'); 
+  const [dateFilter, setDateFilter] = useState(''); 
+  const [selectedTask, setSelectedTask] = useState(null);
+  const router = useRouter();
 
-  const handleLogin = () => {
-    if (passInput === DEPARTMENTS_CREDENTIALS['Gerente']) setUserRole('GERENTE');
-    else if (passInput === DEPARTMENTS_CREDENTIALS['Diretoria']) setUserRole('DIRETORIA');
-    else alert('Senha incorreta! Acesso negado.');
-  };
+  const SETORES_FILTRO = ["Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios e Laticínios)"];
 
   useEffect(() => {
-    if (userRole !== 'NONE') {
-      async function fetchReports() {
-        try {
-          const res = await fetch('/api/checklist');
-          const data = await res.json();
-          setReports(Array.isArray(data) ? data : []);
-        } catch (error) {
-          console.error("Erro ao carregar dados:", error);
-          setReports([]);
-        } finally {
-          setLoading(false);
-        }
-      }
-      fetchReports();
+    const authStatus = localStorage.getItem('user_auth');
+    if (authStatus === 'direcao' || authStatus === 'rh' || authStatus === 'gerente') {
+      setAuthorized(true);
+      setUserRole(authStatus); // 🚀 Salva o cargo (ex: 'gerente')
+    } else {
+      router.push('/gestao'); 
     }
-  }, [userRole]);
 
-  if (userRole === 'NONE') {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-        <div className="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl text-center border-t-8 border-slate-900">
-          <div className="w-20 h-20 bg-slate-900 rounded-3xl flex items-center justify-center text-white text-3xl mb-6 mx-auto shadow-xl font-black italic">D</div>
-          <h1 className="text-2xl font-black uppercase tracking-tighter text-slate-800">Portal Executivo</h1>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-2 mb-8 italic">Direção & Gerência</p>
-          <input 
-            type="password" 
-            placeholder="Senha de Acesso" 
-            className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:border-slate-900 mb-6 text-center shadow-inner"
-            value={passInput}
-            onChange={(e) => setPassInput(e.target.value)}
-          />
-          <button onClick={handleLogin} className="w-full bg-slate-900 text-white font-black py-6 rounded-2xl shadow-xl active:scale-95 transition-all uppercase tracking-widest italic">Acessar Dashboard</button>
-        </div>
-      </div>
-    );
-  }
+    const script = document.createElement('script');
+    script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    script.async = true;
+    script.onload = () => {
+      // @ts-ignore
+      const client = window.supabase.createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || '', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '');
+      setSupabase(client);
+    };
+    document.body.appendChild(script);
+  }, [router]);
 
-  // CÁLCULOS PARA O GRÁFICO COMPARATIVO
-  const sectorStats = reports.reduce((acc: any, report) => {
-    const dept = report.departamento;
-    const errors = report.itens?.filter((i: any) => i.status === 'Não Conforme').length || 0;
-    acc[dept] = (acc[dept] || 0) + errors;
-    return acc;
-  }, {});
+  // 🚀 FUNÇÃO DE BUSCA ISOLADA PARA REUSO NO REALTIME
+  const fetchData = async (client) => {
+    if (!client) return;
+    try {
+      const { data } = await client
+        .from('respostas')
+        .select('*')
+        .neq('setor', 'TESTE_SISTEMA')
+        .order('created_at', { ascending: false });
+      setReports(data || []);
+    } catch (err) { console.error("Erro ao buscar dados:", err); } finally { setLoading(false); }
+  };
 
-  const totalItems = reports.reduce((acc, report) => acc + (report.itens?.length || 0), 0);
-  const totalConforme = reports.reduce((acc, report) => acc + (report.itens?.filter((i: any) => i.status === 'Conforme').length || 0), 0);
-  const totalNaoConforme = reports.reduce((acc, report) => acc + (report.itens?.filter((i: any) => i.status === 'Não Conforme').length || 0), 0);
-  const complianceRate = totalItems > 0 ? ((totalConforme / totalItems) * 100).toFixed(1) : "0.0";
+  // 🚀 LÓGICA DE TEMPO REAL (REALTIME)
+  useEffect(() => {
+    if (!supabase || !authorized) return;
+
+    // Carga inicial de dados
+    fetchData(supabase);
+
+    // Configura o canal para "escutar" mudanças na tabela 'respostas'
+    const channel = supabase
+      .channel('db_changes_vivian')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'respostas' },
+        () => {
+          console.log('⚡ Mudança detectada! Atualizando Dashboard...');
+          fetchData(supabase);
+        }
+      )
+      .subscribe();
+
+    // Limpa a conexão ao sair da página
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, authorized]);
+
+  const calcularSLA = (dataCriacao) => {
+    if (!dataCriacao) return 0;
+    const hoje = new Date();
+    const criacao = new Date(dataCriacao);
+    const diffTime = Math.abs(hoje.getTime() - criacao.getTime());
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const handleLogout = () => {
+    const role = localStorage.getItem('user_auth');
+    localStorage.removeItem('user_auth');
+    if (role === 'rh') window.location.href = '/rh';
+    else if (role === 'gerente') window.location.href = '/';
+    else window.location.href = '/gestao';
+  };
+
+  const filteredReports = reports.filter((r) => {
+    const matchSector = selectedSector === 'TODOS' || r.setor === selectedSector;
+    const matchStatus = statusFilter === 'TODOS' || r.status === statusFilter;
+    const matchDate = !dateFilter || new Date(r.created_at).toLocaleDateString('en-CA') === dateFilter;
+    return matchSector && matchStatus && matchDate;
+  });
+
+  const conformesCount = filteredReports.filter(r => r.status === 'Conforme').length;
+  const naoConformesCount = filteredReports.filter(r => r.status === 'Não Conforme').length;
+  const totalNoFiltro = filteredReports.length;
+  const score = totalNoFiltro > 0 ? ((conformesCount / totalNoFiltro) * 100).toFixed(0) : 0;
+
+  if (!authorized) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-10 font-sans text-slate-900">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 font-sans uppercase italic font-black text-[#1E293B]">
+      
+      {/* 🚀 CSS PARA ISOLAR A IMPRESSÃO DO RELATÓRIO INDIVIDUAL */}
+      <style jsx global>{`
+        @media print {
+          body * { visibility: hidden; }
+          .printable-modal, .printable-modal * { visibility: visible; }
+          .printable-modal { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
+          .no-print { display: none !important; }
+        }
+      `}</style>
+
+      <div className="max-w-[1600px] mx-auto space-y-6 no-print">
         
-        <header className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
-          <div className="text-left w-full border-l-8 border-slate-900 pl-6">
-            <h1 className="text-4xl font-black uppercase tracking-tighter leading-none italic text-slate-900">Dashboard Unidade</h1>
-            <p className="text-slate-500 font-bold uppercase text-[9px] tracking-[0.3em] mt-2 italic">Acesso: <span className="text-slate-900 underline">{userRole}</span></p>
+        <header className="bg-white p-6 rounded-[2rem] shadow-sm flex flex-col md:flex-row justify-between items-center border border-slate-100 gap-4">
+          <div className="flex items-center gap-4 text-[#1E293B]">
+            <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
+            <h1 className="text-2xl tracking-tighter italic uppercase text-[#1E293B]">DASHBOARD CENTRAL</h1>
           </div>
-          <div className="flex gap-3 w-full md:w-auto">
-            {userRole === 'GERENTE' && (
-              <button onClick={() => setShowConfig(!showConfig)} className="flex-1 md:flex-none bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-xs shadow-lg uppercase italic">
-                {showConfig ? 'Relatórios' : 'Senhas'}
-              </button>
+
+          <div className="flex flex-wrap justify-center gap-2">
+             <div className="flex flex-col items-center">
+                <p className="text-[7px] mb-1 text-slate-400">DATA AUDITORIA</p>
+                <input 
+                  type="date" 
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="bg-slate-50 border-2 border-slate-100 p-2 rounded-xl text-[10px] font-black outline-none h-[46px]"
+                />
+             </div>
+
+             <button onClick={() => setStatusFilter(statusFilter === 'Conforme' ? 'TODOS' : 'Conforme')} className={`px-4 py-2 rounded-xl border transition-all text-center min-w-[100px] ${statusFilter === 'Conforme' ? 'bg-green-600 text-white shadow-lg scale-105' : 'bg-green-50 border-green-100 text-green-700'}`}>
+                <p className="text-[7px]">CONFORMES</p>
+                <p className="text-xl">{conformesCount}</p>
+             </button>
+             <button onClick={() => setStatusFilter(statusFilter === 'Não Conforme' ? 'TODOS' : 'Não Conforme')} className={`px-4 py-2 rounded-xl border transition-all text-center min-w-[100px] ${statusFilter === 'Não Conforme' ? 'bg-red-600 text-white shadow-lg scale-105' : 'bg-red-50 border-red-100 text-red-700'}`}>
+                <p className="text-[7px]">PENDÊNCIAS</p>
+                <p className="text-xl">{naoConformesCount}</p>
+             </button>
+             <div className="bg-[#0F172A] px-6 py-2 rounded-xl text-white shadow-lg text-center min-w-[120px] flex flex-col justify-center">
+                <p className="text-[7px] text-indigo-400 uppercase">SCORE PERÍODO</p>
+                <p className="text-2xl">{score}%</p>
+             </div>
+          </div>
+
+          <div className="flex gap-2">
+            {/* 🚀 BOTÃO DE VOLTAR PARA TAREFAS - EXCLUSIVO PARA O GERENTE */}
+            {userRole === 'gerente' && (
+              <button onClick={() => router.push('/')} className="bg-indigo-600 text-white px-6 py-3 rounded-xl text-[9px] shadow-md hover:bg-indigo-700 transition-all font-black uppercase italic">📋 TAREFAS</button>
             )}
-            <button onClick={() => window.print()} className="bg-white text-slate-900 border-2 border-slate-900 px-8 py-4 rounded-2xl font-black text-xs shadow-md uppercase italic">PDF</button>
+            <button onClick={() => window.print()} className="bg-green-600 text-white px-6 py-3 rounded-xl text-[9px] shadow-md flex items-center gap-2 hover:bg-green-700 transition-all font-black uppercase italic">🖨️ GERAL</button>
+            <button onClick={handleLogout} className="bg-slate-900 text-white px-6 py-3 rounded-xl text-[9px] shadow-md font-black uppercase italic">SAIR</button>
           </div>
         </header>
 
-        {showConfig && userRole === 'GERENTE' ? (
-          <div className="bg-white p-10 rounded-[3rem] shadow-xl border-2 border-slate-100 animate-in zoom-in duration-300">
-             <h2 className="text-2xl font-black mb-8 uppercase tracking-tighter italic text-slate-800">Senhas de Acesso Operacional</h2>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               {Object.keys(DEPARTMENTS_CREDENTIALS).map((dept) => (
-                 <div key={dept} className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
-                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">{dept}</label>
-                   <input type="text" defaultValue={DEPARTMENTS_CREDENTIALS[dept as keyof typeof DEPARTMENTS_CREDENTIALS]} className="w-full p-3 rounded-xl border-2 border-slate-200 font-bold text-slate-700 outline-none focus:border-slate-900" />
-                 </div>
-               ))}
-             </div>
-          </div>
-        ) : (
-          <>
-            {/* COMPARATIVO DE ERROS POR SETOR (GRÁFICO SIMULADO) */}
-            <div className="bg-white p-10 rounded-[3rem] shadow-lg mb-12 border border-slate-100">
-              <h3 className="text-lg font-black uppercase italic mb-8 border-b-2 border-slate-100 pb-4">Ranking de Não Conformidades por Setor</h3>
-              <div className="space-y-6">
-                {Object.keys(sectorStats).map(dept => (
-                  <div key={dept} className="space-y-2">
-                    <div className="flex justify-between text-[11px] font-black uppercase italic text-slate-600">
-                      <span>{dept}</span>
-                      <span>{sectorStats[dept]} Ocorrências</span>
+        <div className="flex flex-wrap gap-2 justify-center bg-white p-4 rounded-[1.5rem] shadow-sm border border-slate-100">
+          <button onClick={() => {setSelectedSector('TODOS'); setStatusFilter('TODOS'); setDateFilter('');}} className={`px-4 py-2 rounded-lg text-[9px] border-2 transition-all ${selectedSector === 'TODOS' && statusFilter === 'TODOS' && dateFilter === '' ? 'bg-black text-white border-black' : 'bg-white text-slate-400 border-slate-50'}`}>RESETAR TUDO</button>
+          {SETORES_FILTRO.map(setor => (
+            <button key={setor} onClick={() => setSelectedSector(setor)} className={`px-4 py-2 rounded-lg text-[9px] border-2 transition-all ${selectedSector === setor ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-400 border-slate-50'}`}>{setor}</button>
+          ))}
+        </div>
+
+        <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredReports.map((item, idx) => {
+            const diasAtraso = calcularSLA(item.created_at);
+            const fotos = item.foto_url ? String(item.foto_url).split(',').filter(f => f.trim().length > 5) : [];
+            
+            return (
+              <div key={idx} onClick={() => setSelectedTask(item)} className={`bg-white p-5 rounded-[2.5rem] shadow-xl border-t-[8px] flex flex-col gap-4 transition-all cursor-pointer hover:scale-[1.02] ${item.status === 'Não Conforme' ? 'border-red-500' : 'border-green-500'}`}>
+                
+                <div className="w-full h-40 overflow-hidden rounded-xl bg-slate-100 relative">
+                  {fotos.length > 0 ? (
+                    <img src={fotos[0]} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-[7px] text-slate-300 italic uppercase font-black">Sem Foto Registrada</div>
+                  )}
+
+                  {item.status === 'Não Conforme' && (
+                    <div className={`absolute bottom-2 left-2 px-3 py-1 rounded-lg text-[8px] font-black shadow-lg ${diasAtraso > 0 ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-500 text-black'}`}>
+                      {diasAtraso === 0 ? 'POSTADO HOJE' : `${diasAtraso} DIAS EM ABERTO`}
                     </div>
-                    <div className="w-full bg-slate-100 h-4 rounded-full overflow-hidden shadow-inner">
-                      <div 
-                        className="h-full bg-slate-900 rounded-full transition-all duration-1000 shadow-lg" 
-                        style={{ width: `${(sectorStats[dept] / totalNaoConforme) * 100 || 0}%` }}
-                      ></div>
-                    </div>
+                  )}
+
+                  <div className={`absolute top-2 right-2 text-white text-[7px] px-2 py-1 rounded-md shadow-md font-black ${item.status === 'Não Conforme' ? 'bg-red-600' : 'bg-green-600'}`}>
+                    {item.status}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-              <div className="bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl text-white">
-                <p className="text-slate-400 text-[10px] font-black uppercase mb-2 italic tracking-widest">Aprovação Final</p>
-                <p className="text-6xl font-black tracking-tighter italic">{complianceRate}%</p>
-              </div>
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border-b-8 border-green-500 text-green-600">
-                <p className="text-slate-400 text-[10px] font-black uppercase mb-2 italic">Total Conformes</p>
-                <p className="text-5xl font-black tracking-tighter">{totalConforme}</p>
-              </div>
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border-b-8 border-red-500 text-red-600">
-                <p className="text-slate-400 text-[10px] font-black uppercase mb-2 italic">Total Não Conformes</p>
-                <p className="text-5xl font-black tracking-tighter">{totalNaoConforme}</p>
-              </div>
-            </div>
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <p className="text-indigo-600 text-[8px] font-black uppercase italic">{new Date(item.created_at).toLocaleDateString()} • {item.setor}</p>
+                    <p className="font-bold text-xs leading-tight uppercase line-clamp-2 text-[#1E293B]">{item.tarefa}</p>
+                  </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 print:block">
-              {reports.map((report) => 
-                (report.itens || []).filter((i: any) => i.status === 'Não Conforme').map((item: any, idx: number) => (
-                  <div key={`${report.id}-${idx}`} className="bg-white p-8 rounded-[3rem] shadow-xl flex flex-col md:flex-row gap-8 border border-slate-50 print:mb-8 print:shadow-none print:border-slate-200">
-                    {item.photo && (
-                      <div className="w-full md:w-56 h-56 shrink-0 overflow-hidden rounded-[2.5rem] border-4 border-white shadow-lg">
-                        <img src={item.photo} alt="Evidência" className="w-full h-full object-cover" />
+                  <div className="space-y-2">
+                    {(item.status === 'Não Conforme' || item.observacao_resolucao) && (
+                      <div className="bg-red-50 p-3 rounded-2xl border-l-4 border-red-500">
+                         <p className="text-[6px] text-red-500 font-black uppercase italic">Ocorrência:</p>
+                         <p className="text-[10px] font-bold text-slate-700 italic leading-tight">"{item.observacao || 'SEM DESCRIÇÃO'}"</p>
                       </div>
                     )}
-                    <div className="flex-1 text-left">
-                      <span className="text-[10px] font-black bg-red-600 text-white px-4 py-1.5 rounded-full uppercase mb-4 inline-block shadow-lg italic">NÃO CONFORME</span>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 italic">{report.departamento} • {new Date(report.created_at).toLocaleDateString()}</p>
-                      <p className="font-black text-slate-800 mb-6 text-lg leading-tight italic">{item.description}</p>
-                      <div className="bg-slate-50 p-5 rounded-2xl border-l-8 border-slate-900 shadow-inner italic text-xs text-slate-600 font-black">"{item.observation}"</div>
-                    </div>
+
+                    {item.observacao_resolucao && (
+                      <div className="bg-green-50 p-3 rounded-2xl border-l-4 border-green-500">
+                         <p className="text-[6px] text-green-600 font-black uppercase italic">Tratativa Efetuada:</p>
+                         <p className="text-[10px] font-bold text-green-800 italic leading-tight">"{item.observacao_resolucao}"</p>
+                      </div>
+                    )}
                   </div>
-                ))
-              ).flat()}
-            </div>
-          </>
-        )}
+                </div>
+              </div>
+            );
+          })}
+        </main>
       </div>
+
+      {/* 🚀 MODAL DE ANÁLISE COM FUNÇÃO DE IMPRESSÃO INDIVIDUAL */}
+      {selectedTask && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300 no-scrollbar overflow-y-auto">
+          <div className="bg-white w-full max-w-4xl rounded-[3rem] overflow-hidden shadow-2xl flex flex-col md:flex-row relative animate-in zoom-in duration-300 printable-modal">
+            
+            {/* Botões do Modal (Não aparecem na impressão) */}
+            <div className="absolute top-6 right-6 z-10 flex gap-2 no-print">
+              <button onClick={() => window.print()} className="bg-green-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-black shadow-xl hover:bg-green-700 transition-all">🖨️</button>
+              <button onClick={() => setSelectedTask(null)} className="bg-white text-[#1E293B] w-12 h-12 rounded-full flex items-center justify-center text-2xl font-black shadow-xl hover:bg-red-600 hover:text-white transition-all">✕</button>
+            </div>
+
+            <div className="md:w-1/2 h-[350px] md:h-auto bg-slate-200">
+              {selectedTask.foto_url && String(selectedTask.foto_url).length > 5 ? (
+                <img src={String(selectedTask.foto_url).split(',')[0]} className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex items-center justify-center h-full text-slate-400 font-black italic uppercase">Imagem Não Registrada</div>
+              )}
+            </div>
+
+            <div className="md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white">
+              <div className="mb-8 text-[#1E293B]">
+                <span className={`px-4 py-2 rounded-full text-[10px] font-black text-white ${selectedTask.status === 'Não Conforme' ? 'bg-red-600' : 'bg-green-600'}`}>
+                  {selectedTask.status}
+                </span>
+                <h2 className="text-2xl font-black leading-tight italic uppercase mt-4 text-[#1E293B]">{selectedTask.tarefa}</h2>
+                <p className="text-indigo-600 text-[10px] mt-4 font-black italic uppercase">{selectedTask.setor} • {new Date(selectedTask.created_at).toLocaleDateString()}</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-red-50 p-6 rounded-[2rem] border-l-8 border-red-500">
+                  <p className="text-[8px] text-red-600 mb-2 font-black uppercase italic">Análise do Problema:</p>
+                  <p className="text-sm font-bold italic text-slate-900 leading-relaxed uppercase">" {selectedTask.observacao || 'NÃO DESCRITO'} "</p>
+                </div>
+
+                {selectedTask.observacao_resolucao && (
+                  <div className="bg-green-50 p-6 rounded-[2rem] border-l-8 border-green-500">
+                    <p className="text-[8px] text-green-600 mb-2 font-black uppercase italic">Tratativa de Resolução:</p>
+                    <p className="text-sm font-bold italic text-green-900 leading-relaxed uppercase">" {selectedTask.observacao_resolucao} "</p>
+                    <p className="text-[7px] text-green-500 mt-2 font-black italic">FINALIZADO EM: {new Date(selectedTask.resolvido_em).toLocaleString()}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* 🚀 RODAPÉ DE ASSINATURA EXCLUSIVO PARA IMPRESSÃO */}
+              <div className="mt-16 pt-8 border-t-2 border-slate-100 hidden print:block">
+                <div className="flex justify-between gap-10">
+                   <div className="flex-1 border-t border-black text-center pt-2">
+                      <p className="text-[8px] font-black uppercase italic">Assinatura Encarregado</p>
+                   </div>
+                   <div className="flex-1 border-t border-black text-center pt-2">
+                      <p className="text-[8px] font-black uppercase italic">Assinatura Auditoria</p>
+                   </div>
+                </div>
+              </div>
+
+              <button onClick={() => setSelectedTask(null)} className="mt-10 w-full bg-[#0F172A] text-white py-5 rounded-2xl font-black text-xs hover:bg-indigo-600 transition-all shadow-xl italic uppercase no-print">Fechar Análise</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
