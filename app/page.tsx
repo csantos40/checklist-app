@@ -70,7 +70,6 @@ const TASK_DATA = {
     { description: 'V.O. MANHÃ: Balcões de padaria (abastecimento, precificação, qualidade, limpeza, equipamentos)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: REPOSIÇÃO (área de venda sem buracos), ver produtos em falta e repassar ao encarregado', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Balcões de açougue (abastecimento, precificação, qualidade, limpeza)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Balcões de padaria (abastecimento, precificação, qualidade, limpeza, equipamentos)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Bebidas frias geladeiras abastecidas constantes', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Cartazeamento dentro e fora da loja (Validade, descrição, local correto)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Depósito organizado e limpo', periodicity: 'DIÁRIO' },
@@ -197,6 +196,18 @@ export default function Home() {
   const [tratativaTexto, setTratativaTexto] = useState('');
 
   useEffect(() => { setSuppressHydration(true); }, []);
+
+  // 🚀 BLOQUEIO ANTI-ATUALIZAÇÃO ACIDENTAL
+  useEffect(() => {
+    const handleBeforeUnload = (e: any) => {
+      if (isAuthenticated && !isLockedToday) {
+        e.preventDefault();
+        e.returnValue = ''; 
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isAuthenticated, isLockedToday]);
 
   useEffect(() => {
     const authStatus = localStorage.getItem('user_auth');
@@ -328,9 +339,11 @@ export default function Home() {
       if (!error) {
         const realIdx = tasks.findIndex(t => t.description === resolvingTask.description && t.created_at === resolvingTask.created_at);
         const newTasks = [...tasks];
-        newTasks[realIdx].status = 'Conforme';
-        newTasks[realIdx].frozen = true;
-        saveState(newTasks);
+        if(realIdx !== -1) {
+            newTasks[realIdx].status = 'Conforme';
+            newTasks[realIdx].frozen = true;
+            saveState(newTasks);
+        }
         alert("PENDÊNCIA RESOLVIDA COM SUCESSO!");
         setResolvingTask(null);
         setTratativaTexto('');
@@ -340,9 +353,10 @@ export default function Home() {
     } finally { setLoading(false); }
   };
 
+  // 🚀 CORREÇÃO DE CLIQUE COM INDEXOF
   const handleStatusChange = (idx: number, clickedStatus: string) => {
-    const realIdx = tasks.findIndex(t => t.description === filteredTasks[idx].description);
-    if (tasks[realIdx].frozen || isLockedToday) return;
+    const realIdx = tasks.indexOf(filteredTasks[idx]);
+    if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
 
     const newTasks = [...tasks];
 
@@ -362,16 +376,16 @@ export default function Home() {
   };
 
   const updateTaskData = (idx: number, field: string, value: string) => {
-    const realIdx = tasks.findIndex(t => t.description === filteredTasks[idx].description);
-    if (tasks[realIdx].frozen || isLockedToday) return;
+    const realIdx = tasks.indexOf(filteredTasks[idx]);
+    if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
     const newTasks = [...tasks];
     newTasks[realIdx][field] = value;
     saveState(newTasks);
   };
 
   const handleAddPhoto = (idx: number, photoBase64: any) => {
-    const realIdx = tasks.findIndex(t => t.description === filteredTasks[idx].description);
-    if (tasks[realIdx].frozen || isLockedToday) return;
+    const realIdx = tasks.indexOf(filteredTasks[idx]);
+    if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
     const newTasks = [...tasks];
     if (!newTasks[realIdx].photos) newTasks[realIdx].photos = [];
     newTasks[realIdx].photos.push(photoBase64);
@@ -379,15 +393,16 @@ export default function Home() {
   };
 
   const handleRemovePhoto = (taskIdx: number, photoIdx: number) => {
-    const realIdx = tasks.findIndex(t => t.description === filteredTasks[taskIdx].description);
-    if (tasks[realIdx].frozen || isLockedToday) return;
+    const realIdx = tasks.indexOf(filteredTasks[taskIdx]);
+    if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
     const newTasks = [...tasks];
     newTasks[realIdx].photos.splice(photoIdx, 1);
     saveState(newTasks);
   };
 
   const freezeTask = (idx: number) => {
-    const realIdx = tasks.findIndex(t => t.description === filteredTasks[idx].description);
+    const realIdx = tasks.indexOf(filteredTasks[idx]);
+    if (realIdx === -1) return;
     const task = tasks[realIdx];
     if (task.status === 'Aguardando') return alert("SELECIONE O STATUS ANTES!");
     if (task.status === 'Não Conforme' && (!task.observation || !task.photos || task.photos.length === 0)) {
