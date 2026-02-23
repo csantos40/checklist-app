@@ -16,11 +16,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Checklist Vivian",
   description: "Sistema de monitoramento e auditoria - Supermercados Vivian",
-  icons: {
-    icon: "https://auditoria-vivian-loja.vercel.app/logo.png?v=final",
-    shortcut: "https://auditoria-vivian-loja.vercel.app/logo.png?v=final",
-    apple: "https://auditoria-vivian-loja.vercel.app/logo.png?v=final",
-  },
 };
 
 export default function RootLayout({
