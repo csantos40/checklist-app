@@ -1,20 +1,71 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // ADICIONE ESTA LINHA AQUI!
+import { useRouter } from 'next/navigation';
 
-// 1. FILTRO DE SETORES CORRETO (Sem duplicados e sem RH/Diretoria)
+// --- 🚀 NOVO: FUNÇÕES DO BANCO DE DADOS LOCAL (INDEXEDDB) ---
+const DB_NAME = 'VivianAuditoriaDB';
+const STORE_NAME = 'checklists';
+
+const initDB = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = (e: any) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const saveToIndexedDB = async (key: string, data: any) => {
+  const db: any = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.put(data, key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+};
+
+const loadFromIndexedDB = async (key: string) => {
+  const db: any = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const removeFromIndexedDB = async (key: string) => {
+  const db: any = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.delete(key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+};
+// -----------------------------------------------------------
+
+// 1. FILTRO DE SETORES CORRETO
 const SETORES_LISTA = [
   "Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios e Laticínios)"
 ];
 
-// 2. TAREFAS (Sintaxe limpa para não dar erro)
+// 2. TAREFAS
 const TASK_DATA = {
   'TESTE_SISTEMA': [
     { description: 'TESTE: Validar se a foto está subindo', periodicity: 'DIÁRIO' },
     { description: 'TESTE: Validar se a observação salva', periodicity: 'DIÁRIO' },
   ],
   'Gerente': [
-    // VOLTA OLÍMPICA MANHÃ
     { description: 'V.O. MANHÃ: Preços no sistema / PDV (Atualização de preços no sistema)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Balcões de padaria (abastecimento, precificação, qualidade, limpeza, equipamentos)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: REPOSIÇÃO (área de venda sem buracos), ver produtos em falta e repassar ao encarregado', periodicity: 'DIÁRIO' },
@@ -30,9 +81,6 @@ const TASK_DATA = {
     { description: 'V.O. MANHÃ: Pontos extras (Abastecimento, precificação, validade)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Precificação (todos os produtos com a etiqueta de preço)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Som do rádio interno (volume, ruídos...)', periodicity: 'DIÁRIO' },
-
-
-    // DURANTE O DIA
     { description: 'DIA: Acompanhar vendas, perdas, margem versus a META do dia anterior/acumulado mês', periodicity: 'DIÁRIO' },
     { description: 'DIA: Verificar rupturas na área de venda e acionar o responsável imediatamente', periodicity: 'DIÁRIO' },
     { description: 'DIA: Comunicar apostas comerciais ao time de encarregados', periodicity: 'DIÁRIO' },
@@ -40,17 +88,12 @@ const TASK_DATA = {
     { description: 'DIA: Acompanhamentos vendas dos itens das ofertas, se a exposição foi em aceita', periodicity: 'DIÁRIO' },   
     { description: 'DIA: Preparação para os festivais, degustações, ofertas do dia (cartazeamento, exposição)', periodicity: 'DIÁRIO' },
     { description: 'DIA: Acompanhar divergências no recebimento (quantidade e valor e após entender junto com o comercial e CPD loja os motivos para a correção.', periodicity: 'DIÁRIO' },
-
-    // SEMANAL
     { description: 'SEMANAL: Toda sexta-feira: Definir ofertas do hortifruti', periodicity: 'SEMANAL' },
     { description: 'SEMANAL: Validade dos produtos (lista dos itens com plano de ação)', periodicity: 'SEMANAL' },
     { description: 'SEMANAL: Estoque - Troca - Extrato de movimentação, acompanhamento junto ao Cleber', periodicity: 'SEMANAL' },
     { description: 'SEMANAL: SEXTA 14:00h- Comercial - Lista de produtos com validade curta 7 dias (trabalhar com plano de ação, rebaixe de preço, exposição, cartazeamento, estoques)', periodicity: 'SEMANAL' },
     { description: 'SEMANAL: Acompanhar o despacho de osso', periodicity: 'SEMANAL' },
     { description: 'SEMANAL: Comercial (Levar sugestões de ofertas agressivas ao comercial, como itens próximo de vencimento, levantar as informações ao repassar aos setores)', periodicity: 'SEMANAL' },
-
-
-    // MENSAL / REUNIÕES
     { description: 'MENSAL: Reunião Gerente Geral com encarregados(as) e Subgerente', periodicity: 'MENSAL' },
     { description: 'MENSAL: Reunião Encarregados(as) com a sua equipe (falar dos pontos do mês que passou e plano de ação para o mês seguinte)', periodicity: 'MENSAL' },
     { description: 'MENSAL: Reunião Indicadores com Comercial (Gerente, Sub, RH e Comercial)', periodicity: 'MENSAL' },
@@ -60,10 +103,8 @@ const TASK_DATA = {
     { description: 'MENSAL: Acompanhar cotações', periodicity: 'DIÁRIO' },
     { description: 'MENSAL: Elaborar relatórios semanais das vendas das cotações', periodicity: 'MENSAL' },
     { description: 'MENSAL: Perdas e itens sem giro (Reunião com Prevenção - plano de ação)', periodicity: 'MENSAL' },
-    
   ],
   'SubGerente': [
-    // VOLTA OLÍMPICA MANHÃ
     { description: 'OPERAÇÃO: Acompanhar cotações', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: Apresentação pessoal da equipe (uniformes, maquiagem, cabelos) e escalas', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: Balcões de açougue  (abastecimento, precificação, qualidade, limpeza)', periodicity: 'DIÁRIO' },
@@ -77,20 +118,15 @@ const TASK_DATA = {
     { description: 'QUALIDADE: Hortifrutti (Qualidade, precificação, abastecimento, cartazeamento)', periodicity: 'DIÁRIO' },
     { description: 'QUALIDADE: Limpeza e organização da frente de caixa', periodicity: 'DIÁRIO' },
     { description: 'QUALIDADE: Limpeza e organização dos banheiros', periodicity: 'DIÁRIO' },
-    
     { description: 'OPERAÇÃO: Ofertas diárias (Pegar o encarte de ofertas e ver como está a exposição, precificação)', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: Ofertas do dia (abastecimento, precificação)', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: Pontas de gôndulas (Abastecimento, troca de preços, cartazeamento, validade da ação) - sugerir troca', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: Precificação (todos os produtos com a etiqueta de preço)', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: REPOSIÇÃO (área de venda sem buracos), ver produtos em falta na área de venda e repassar ao encarregado da reposição', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: QUINTA - Recolher  lista de validades com encarregados dos setores', periodicity: 'SEMANAL' },
-
-
-     // MENSAL / REUNIÕES
-     { description: 'PREVENÇÃO: Lista de produtos com validade curta 15 dias (trabalhar com rebaixe de preço, exposição, cartazeamento, estoques) ', periodicity: 'SEMANAL' },
-     { description: 'PREVENÇÃO: SEXTA 14:00h- Comercial - Lista de produtos com validade curta 7 dias (trabalhar com plano de ação, rebaixe de preço, exposição, cartazeamento, estoques)', periodicity: 'SEMANAL' },
-     { description: 'OPERAÇÃO: Balcão de frios', periodicity: 'DIÁRIO' },
-  
+    { description: 'PREVENÇÃO: Lista de produtos com validade curta 15 dias (trabalhar com rebaixe de preço, exposição, cartazeamento, estoques) ', periodicity: 'SEMANAL' },
+    { description: 'PREVENÇÃO: SEXTA 14:00h- Comercial - Lista de produtos com validade curta 7 dias (trabalhar com plano de ação, rebaixe de preço, exposição, cartazeamento, estoques)', periodicity: 'SEMANAL' },
+    { description: 'OPERAÇÃO: Balcão de frios', periodicity: 'DIÁRIO' },
   ],
   'FLV': [
     { description: 'ABASTECIMENTO: Todas as bancas estão abastecidas?', periodicity: 'DIÁRIO' },
@@ -110,7 +146,6 @@ const TASK_DATA = {
     { description: 'OPERAÇÃO: Terça e Quarta: Preparação para o dia da feira, providenciando cartazeamento "TERÇA E QUARTA VERDE"', periodicity: 'SEMANAL' },
     { description: 'OPERAÇÃO: Sexta: Definir os itens que entrará na agenda de ofertas, olhando margem, preço atual e preço sugerido', periodicity: 'SEMANAL' },
     { description: 'GESTÃO: Foi realizado o envio da sugestão de ofertas para o Heitor?', periodicity: 'SEMANAL' },
-  
   ],
   'Mercearia': [
     { description: 'ABASTECIMENTO: Itens que acabaram de chegar já estão na área de venda?', periodicity: 'DIÁRIO' },
@@ -143,7 +178,6 @@ const TASK_DATA = {
     { description: 'OPERAÇÃO: Foi realizado a ronda de validade?', periodicity: 'SEMANAL' },
     { description: 'GESTÃO: Foi programado as escalas de trabalho da equipe?', periodicity: 'SEMANAL' },
     { description: 'GESTÃO: Quinta-feira - Entregar p/ Adriano lista dos produtos próximo do vencimento (proxima semana) e suas quantidades, para traçar plano de ação sendo exposição e preço agressivo, buscando venda rápida', periodicity: 'SEMANAL' },
-    
   ]
 };
 
@@ -153,15 +187,13 @@ export default function Home() {
   const [department, setDepartment] = useState('');
   const [password, setPassword] = useState('');
   const [currentPeriodicity, setCurrentPeriodicity] = useState('DIÁRIO');
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [supabase, setSupabase] = useState(null);
+  const [supabase, setSupabase] = useState<any>(null);
   const [senhasBanco, setSenhasBanco] = useState({});
   const [suppressHydration, setSuppressHydration] = useState(false);
   const [isLockedToday, setIsLockedToday] = useState(false);
-
-  // 🚀 ESTADOS PARA GESTÃO DE TRATATIVAS
-  const [resolvingTask, setResolvingTask] = useState(null);
+  const [resolvingTask, setResolvingTask] = useState<any>(null);
   const [tratativaTexto, setTratativaTexto] = useState('');
 
   useEffect(() => { setSuppressHydration(true); }, []);
@@ -188,8 +220,8 @@ export default function Home() {
         setSupabase(client);
         let { data } = await client.from('credenciais').select('setor, senha');
         if (data) {
-          const creds = { 'TESTE_SISTEMA': 'teste123' };
-          data.forEach(item => { creds[item.setor] = item.senha; });
+          const creds: any = { 'TESTE_SISTEMA': 'teste123' };
+          data.forEach((item: any) => { creds[item.setor] = item.senha; });
           setSenhasBanco(creds);
         }
       } catch (err) { console.error("Erro conexão."); }
@@ -197,31 +229,38 @@ export default function Home() {
     document.body.appendChild(script);
   }, []);
 
+  // 🚀 BUSCA INICIAL DE TAREFAS ADAPTADA PARA INDEXEDDB
   useEffect(() => {
     if (isAuthenticated && department) {
       const today = new Date().toLocaleDateString();
       const lastSubmitDate = localStorage.getItem(`last_submit_date_${department}`);
       setIsLockedToday(lastSubmitDate === today);
       
-      const saved = localStorage.getItem(`chk_vVivian_v8_${department}`);
-      if (saved) { 
-        setTasks(JSON.parse(saved)); 
-      } else {
-        // @ts-ignore
-        const allSectorTasks = TASK_DATA[department] || [];
-        setTasks(allSectorTasks.map(t => ({ 
-          ...t, 
-          status: 'Aguardando', 
-          observation: '', 
-          photos: [], 
-          frozen: false,
-          created_at: new Date().toISOString() 
-        })));
-      }
+      const loadTasks = async () => {
+        try {
+          const saved: any = await loadFromIndexedDB(`chk_vVivian_v8_${department}`);
+          if (saved) { 
+            setTasks(saved); 
+          } else {
+            // @ts-ignore
+            const allSectorTasks = TASK_DATA[department] || [];
+            setTasks(allSectorTasks.map((t: any) => ({ 
+              ...t, 
+              status: 'Aguardando', 
+              observation: '', 
+              photos: [], 
+              frozen: false,
+              created_at: new Date().toISOString() 
+            })));
+          }
+        } catch (e) {
+          console.error("Erro ao carregar do IndexedDB", e);
+        }
+      };
+      loadTasks();
     }
   }, [isAuthenticated, department]);
 
-  // 🚀 BUSCA PENDÊNCIAS REAIS DO BANCO AO ENTRAR NA ABA (LÓGICA DE FOTOS CORRIGIDA)
   useEffect(() => {
     async function puxarPendenciasReais() {
       if (!supabase || !department || currentPeriodicity !== 'PENDÊNCIAS') return;
@@ -233,12 +272,11 @@ export default function Home() {
         .eq('status', 'Não Conforme');
 
       if (data) {
-        const pendenciasFormatadas = data.map(p => ({
+        const pendenciasFormatadas = data.map((p: any) => ({
           description: p.tarefa,
           status: 'Não Conforme',
           observation: p.observacao,
-          // 🎯 CORREÇÃO: Puxa os links das fotos do banco para o estado da tarefa
-          photos: p.foto_url ? String(p.foto_url).split(',').filter(link => link.trim().length > 10) : [],
+          photos: p.foto_url ? String(p.foto_url).split(',').filter((link: string) => link.trim().length > 10) : [],
           created_at: p.created_at,
           frozen: false,
           periodicity: 'PENDÊNCIAS'
@@ -253,16 +291,21 @@ export default function Home() {
     puxarPendenciasReais();
   }, [currentPeriodicity, department, supabase]);
 
-  const calcularSLA = (dataIso) => {
+  const calcularSLA = (dataIso: string) => {
     const dataCriacao = new Date(dataIso);
     const hoje = new Date();
     const diffTime = Math.abs(hoje.getTime() - dataCriacao.getTime());
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const saveState = (newTasks) => {
+  // 🚀 SALVAMENTO ADAPTADO PARA INDEXEDDB
+  const saveState = async (newTasks: any[]) => {
     setTasks(newTasks);
-    localStorage.setItem(`chk_vVivian_v8_${department}`, JSON.stringify(newTasks));
+    try {
+      await saveToIndexedDB(`chk_vVivian_v8_${department}`, newTasks);
+    } catch (e) {
+      console.error("Erro ao salvar no IndexedDB", e);
+    }
   };
 
   const finalizarResolucao = async () => {
@@ -297,7 +340,7 @@ export default function Home() {
     } finally { setLoading(false); }
   };
 
-  const handleStatusChange = (idx, clickedStatus) => {
+  const handleStatusChange = (idx: number, clickedStatus: string) => {
     const realIdx = tasks.findIndex(t => t.description === filteredTasks[idx].description);
     if (tasks[realIdx].frozen || isLockedToday) return;
 
@@ -318,7 +361,7 @@ export default function Home() {
     saveState(newTasks);
   };
 
-  const updateTaskData = (idx, field, value) => {
+  const updateTaskData = (idx: number, field: string, value: string) => {
     const realIdx = tasks.findIndex(t => t.description === filteredTasks[idx].description);
     if (tasks[realIdx].frozen || isLockedToday) return;
     const newTasks = [...tasks];
@@ -326,7 +369,7 @@ export default function Home() {
     saveState(newTasks);
   };
 
-  const handleAddPhoto = (idx, photoBase64) => {
+  const handleAddPhoto = (idx: number, photoBase64: any) => {
     const realIdx = tasks.findIndex(t => t.description === filteredTasks[idx].description);
     if (tasks[realIdx].frozen || isLockedToday) return;
     const newTasks = [...tasks];
@@ -335,7 +378,7 @@ export default function Home() {
     saveState(newTasks);
   };
 
-  const handleRemovePhoto = (taskIdx, photoIdx) => {
+  const handleRemovePhoto = (taskIdx: number, photoIdx: number) => {
     const realIdx = tasks.findIndex(t => t.description === filteredTasks[taskIdx].description);
     if (tasks[realIdx].frozen || isLockedToday) return;
     const newTasks = [...tasks];
@@ -343,7 +386,7 @@ export default function Home() {
     saveState(newTasks);
   };
 
-  const freezeTask = (idx) => {
+  const freezeTask = (idx: number) => {
     const realIdx = tasks.findIndex(t => t.description === filteredTasks[idx].description);
     const task = tasks[realIdx];
     if (task.status === 'Aguardando') return alert("SELECIONE O STATUS ANTES!");
@@ -410,13 +453,14 @@ export default function Home() {
       alert("SINCRONIZADO COM SUCESSO! BLOQUEADO ATÉ AMANHÃ.");
       const resetTasks = tasks.map(t => t.periodicity === currentPeriodicity ? { ...t, status: 'Aguardando', observation: '', photos: [], frozen: false } : t);
       setTasks(resetTasks);
-      localStorage.removeItem(`chk_vVivian_v8_${department}`);
+      
+      // 🚀 LIMPEZA DO INDEXEDDB APÓS ENVIO
+      await removeFromIndexedDB(`chk_vVivian_v8_${department}`);
     } catch (err) { alert("ERRO AO SINCRONIZAR"); } finally { setLoading(false); }
   };
 
   const filteredTasks = tasks.filter(t => currentPeriodicity === 'PENDÊNCIAS' ? t.status === 'Não Conforme' : t.periodicity === currentPeriodicity);
   const totalNCPendentes = tasks.filter(t => t.status === 'Não Conforme').length;
-  const pendentesNoPeriodo = tasks.filter(t => t.periodicity === currentPeriodicity && !t.frozen).length;
 
   const handleLogin = () => {
     // @ts-ignore
@@ -525,7 +569,7 @@ export default function Home() {
                           <>
                             <textarea disabled={task.frozen} placeholder="PLANO DE AÇÃO IMEDIATO..." className="w-full p-5 rounded-[2rem] border-2 border-red-200 text-black font-bold outline-none text-sm uppercase italic font-black shadow-inner bg-white font-black italic" value={task.observation} onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} />
                             <div className="flex flex-wrap gap-3 items-center font-black italic">
-                              {task.photos?.map((p, pIdx) => (
+                              {task.photos?.map((p: string, pIdx: number) => (
                                   <div key={pIdx} className="w-16 h-16 rounded-xl border-2 border-red-200 overflow-hidden shadow-sm relative font-black italic">
                                       <img src={p} className="w-full h-full object-cover font-black italic" />
                                       {!task.frozen && (
@@ -536,10 +580,9 @@ export default function Home() {
                               {!task.frozen && (
                                   <label className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-600 text-white text-xl cursor-pointer shadow-md active:scale-95 transition-all border-2 border-white text-white font-black font-black italic">
                                     +
-                                    <input type="file" accept="image/*" capture="environment" className="hidden font-black italic" onChange={(e) => {
+                                    <input type="file" accept="image/*" capture="environment" className="hidden font-black italic" onChange={(e: any) => {
                                       const reader = new FileReader();
                                       reader.onloadend = () => handleAddPhoto(idx, reader.result);
-                                      // @ts-ignore
                                       reader.readAsDataURL(e.target.files[0]);
                                     }} />
                                   </label>
