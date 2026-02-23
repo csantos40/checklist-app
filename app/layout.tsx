@@ -12,7 +12,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// 🚀 Forçando o navegador a buscar a imagem direto da URL oficial
 export const metadata: Metadata = {
   title: "Checklist Vivian",
   description: "Sistema de monitoramento e auditoria - Supermercados Vivian",
@@ -25,6 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-br" suppressHydrationWarning>
+      <head>
+        {/* 🚀 A MARRETADA FINAL: Forçando o HTML a ler o logo.png da pasta public */}
+        <link rel="icon" href="/logo.png?v=1000" type="image/png" sizes="any" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
