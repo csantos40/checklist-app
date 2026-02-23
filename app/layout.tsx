@@ -12,9 +12,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// 🚀 Apontando direto para o arquivo com nome único na pasta public
 export const metadata: Metadata = {
   title: "Checklist Vivian",
   description: "Sistema de monitoramento e auditoria - Supermercados Vivian",
+  icons: {
+    icon: "/icone-oficial.png",
+  },
 };
 
 export default function RootLayout({
@@ -24,10 +28,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-br" suppressHydrationWarning>
-      <head>
-        {/* 🚀 A MARRETADA FINAL: Forçando o HTML a ler o logo.png da pasta public */}
-        <link rel="icon" href="/logo.png?v=1000" type="image/png" sizes="any" />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
