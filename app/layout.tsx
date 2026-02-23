@@ -12,13 +12,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// 🚀 Apontando direto para o arquivo com nome único na pasta public
 export const metadata: Metadata = {
   title: "Checklist Vivian",
   description: "Sistema de monitoramento e auditoria - Supermercados Vivian",
-  icons: {
-    icon: "/icone-oficial.png",
-  },
 };
 
 export default function RootLayout({
