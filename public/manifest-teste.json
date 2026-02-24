@@ -1,0 +1,13 @@
+{
+  "name": "Teste Vivian",
+  "short_name": "Teste",
+  "description": "Ambiente de Teste - Supermercados Vivian",
+  "start_url": "/teste",
+  "display": "standalone",
+  "background_color": "#0B1C3D",
+  "theme_color": "#0B1C3D",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
