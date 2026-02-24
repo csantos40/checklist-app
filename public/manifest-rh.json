@@ -1,8 +1,10 @@
 {
+  "id": "app-rh",
   "name": "RH Vivian",
   "short_name": "RH",
   "description": "Painel de RH - Supermercados Vivian",
-  "start_url": "/rh",
+  "start_url": "/rh/",
+  "scope": "/rh/",
   "display": "standalone",
   "background_color": "#0B1C3D",
   "theme_color": "#0B1C3D",

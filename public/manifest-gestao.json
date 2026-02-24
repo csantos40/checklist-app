@@ -1,8 +1,10 @@
 {
+  "id": "app-gestao",
   "name": "Gestão Vivian",
   "short_name": "Gestão",
   "description": "Painel de Gestão - Supermercados Vivian",
-  "start_url": "/gestao",
+  "start_url": "/gestao/",
+  "scope": "/gestao/",
   "display": "standalone",
   "background_color": "#0B1C3D",
   "theme_color": "#0B1C3D",

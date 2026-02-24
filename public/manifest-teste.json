@@ -1,8 +1,10 @@
 {
+  "id": "app-teste",
   "name": "Teste Vivian",
   "short_name": "Teste",
   "description": "Ambiente de Teste - Supermercados Vivian",
-  "start_url": "/teste",
+  "start_url": "/teste/",
+  "scope": "/teste/",
   "display": "standalone",
   "background_color": "#0B1C3D",
   "theme_color": "#0B1C3D",
