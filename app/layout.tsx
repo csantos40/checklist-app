@@ -15,7 +15,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Checklist Vivian",
   description: "Sistema de monitoramento e auditoria - Supermercados Vivian",
-  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
@@ -24,8 +23,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-br">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    // 🚀 suppressHydrationWarning evita a tela vermelha do erro de extensões
+    <html lang="pt-br" suppressHydrationWarning>
+      {/* 🚀 overscroll-y-none trava o arrasto no Tailwind */}
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased overscroll-y-none`} suppressHydrationWarning>
         {children}
       </body>
     </html>

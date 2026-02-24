@@ -6,7 +6,10 @@
   color-scheme: light;
 }
 
-body {
+/* 🚀 TRAVA O PUXAR PARA BAIXO NO TELEMÓVEL */
+html, body {
   background-color: var(--background) !important;
   color: var(--foreground) !important;
+  overscroll-behavior-y: none !important; 
+  overscroll-behavior-x: none !important;
 }
