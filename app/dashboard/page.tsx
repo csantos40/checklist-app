@@ -4,13 +4,15 @@ import { useRouter } from 'next/navigation';
 
 export default function DashboardDefinitiva() {
   const [authorized, setAuthorized] = useState(false);
-  const [userRole, setUserRole] = useState(''); // 🚀 Identifica o cargo para o botão de volta
+  const [userRole, setUserRole] = useState(''); 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [supabase, setSupabase] = useState(null);
   const [selectedSector, setSelectedSector] = useState('TODOS'); 
   const [statusFilter, setStatusFilter] = useState('TODOS'); 
-  const [dateFilter, setDateFilter] = useState(''); 
+  // 🚀 NOVOS ESTADOS PARA O PERÍODO
+  const [startDate, setStartDate] = useState(''); 
+  const [endDate, setEndDate] = useState(''); 
   const [selectedTask, setSelectedTask] = useState(null);
   const router = useRouter();
 
@@ -20,7 +22,7 @@ export default function DashboardDefinitiva() {
     const authStatus = localStorage.getItem('user_auth');
     if (authStatus === 'direcao' || authStatus === 'rh' || authStatus === 'gerente') {
       setAuthorized(true);
-      setUserRole(authStatus || ''); // 🚀 Salva o cargo (ex: 'gerente')
+      setUserRole(authStatus || ''); 
     } else {
       router.push('/gestao'); 
     }
@@ -36,7 +38,6 @@ export default function DashboardDefinitiva() {
     document.body.appendChild(script);
   }, [router]);
 
-  // 🚀 CORREÇÃO 1: Adicionada tipagem ": any" para evitar erro na linha 40
   const fetchData = async (client: any) => {
     if (!client) return;
     try {
@@ -49,13 +50,11 @@ export default function DashboardDefinitiva() {
     } catch (err) { console.error("Erro ao buscar dados:", err); } finally { setLoading(false); }
   };
 
-  // 🚀 LÓGICA DE TEMPO REAL (REALTIME)
   useEffect(() => {
     if (!supabase || !authorized) return;
 
     fetchData(supabase);
 
-    // 🚀 CORREÇÃO 2: Forçado tipo "(supabase as any)" para evitar erro na linha 59
     const channel = (supabase as any)
       .channel('db_changes_vivian')
       .on(
@@ -73,7 +72,6 @@ export default function DashboardDefinitiva() {
     };
   }, [supabase, authorized]);
 
-  // 🚀 CORREÇÃO 3: Tipagem básica de parâmetros
   const calcularSLA = (dataCriacao: any) => {
     if (!dataCriacao) return 0;
     const hoje = new Date();
@@ -90,10 +88,23 @@ export default function DashboardDefinitiva() {
     else window.location.href = '/gestao';
   };
 
+  // 🚀 LÓGICA DE FILTRO POR PERÍODO ATUALIZADA
   const filteredReports = reports.filter((r: any) => {
     const matchSector = selectedSector === 'TODOS' || r.setor === selectedSector;
     const matchStatus = statusFilter === 'TODOS' || r.status === statusFilter;
-    const matchDate = !dateFilter || new Date(r.created_at).toLocaleDateString('en-CA') === dateFilter;
+    
+    let matchDate = true;
+    if (startDate || endDate) {
+      const reportDate = new Date(r.created_at).toLocaleDateString('en-CA');
+      if (startDate && endDate) {
+        matchDate = reportDate >= startDate && reportDate <= endDate;
+      } else if (startDate) {
+        matchDate = reportDate >= startDate;
+      } else if (endDate) {
+        matchDate = reportDate <= endDate;
+      }
+    }
+    
     return matchSector && matchStatus && matchDate;
   });
 
@@ -125,12 +136,23 @@ export default function DashboardDefinitiva() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-2">
+             {/* 🚀 NOVOS CAMPOS DE CALENDÁRIO */}
              <div className="flex flex-col items-center">
-                <p className="text-[7px] mb-1 text-slate-400">DATA AUDITORIA</p>
+                <p className="text-[7px] mb-1 text-slate-400">DATA INICIAL</p>
                 <input 
                   type="date" 
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-slate-50 border-2 border-slate-100 p-2 rounded-xl text-[10px] font-black outline-none h-[46px]"
+                />
+             </div>
+             
+             <div className="flex flex-col items-center">
+                <p className="text-[7px] mb-1 text-slate-400">DATA FINAL</p>
+                <input 
+                  type="date" 
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
                   className="bg-slate-50 border-2 border-slate-100 p-2 rounded-xl text-[10px] font-black outline-none h-[46px]"
                 />
              </div>
@@ -159,7 +181,7 @@ export default function DashboardDefinitiva() {
         </header>
 
         <div className="flex flex-wrap gap-2 justify-center bg-white p-4 rounded-[1.5rem] shadow-sm border border-slate-100">
-          <button onClick={() => {setSelectedSector('TODOS'); setStatusFilter('TODOS'); setDateFilter('');}} className={`px-4 py-2 rounded-lg text-[9px] border-2 transition-all ${selectedSector === 'TODOS' && statusFilter === 'TODOS' && dateFilter === '' ? 'bg-black text-white border-black' : 'bg-white text-slate-400 border-slate-50'}`}>RESETAR TUDO</button>
+          <button onClick={() => {setSelectedSector('TODOS'); setStatusFilter('TODOS'); setStartDate(''); setEndDate('');}} className={`px-4 py-2 rounded-lg text-[9px] border-2 transition-all ${selectedSector === 'TODOS' && statusFilter === 'TODOS' && startDate === '' && endDate === '' ? 'bg-black text-white border-black' : 'bg-white text-slate-400 border-slate-50'}`}>RESETAR TUDO</button>
           {SETORES_FILTRO.map(setor => (
             <button key={setor} onClick={() => setSelectedSector(setor)} className={`px-4 py-2 rounded-lg text-[9px] border-2 transition-all ${selectedSector === setor ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-400 border-slate-50'}`}>{setor}</button>
           ))}
