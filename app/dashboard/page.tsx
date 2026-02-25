@@ -10,7 +10,6 @@ export default function DashboardDefinitiva() {
   const [supabase, setSupabase] = useState(null);
   const [selectedSector, setSelectedSector] = useState('TODOS'); 
   const [statusFilter, setStatusFilter] = useState('TODOS'); 
-  // 🚀 NOVOS ESTADOS PARA O PERÍODO
   const [startDate, setStartDate] = useState(''); 
   const [endDate, setEndDate] = useState(''); 
   const [selectedTask, setSelectedTask] = useState(null);
@@ -20,7 +19,8 @@ export default function DashboardDefinitiva() {
 
   useEffect(() => {
     const authStatus = localStorage.getItem('user_auth');
-    if (authStatus === 'direcao' || authStatus === 'rh' || authStatus === 'gerente') {
+    // 🚀 ADICIONADO 'teste_sistema' PARA TER PERMISSÃO DE ENTRAR NO DASHBOARD
+    if (authStatus === 'direcao' || authStatus === 'rh' || authStatus === 'gerente' || authStatus === 'teste_sistema') {
       setAuthorized(true);
       setUserRole(authStatus || ''); 
     } else {
@@ -85,10 +85,11 @@ export default function DashboardDefinitiva() {
     localStorage.removeItem('user_auth');
     if (role === 'rh') window.location.href = '/rh';
     else if (role === 'gerente') window.location.href = '/';
+    // 🚀 SE FOR MODO TESTE, VOLTA PARA A TELA DE TESTE AO SAIR
+    else if (role === 'teste_sistema') window.location.href = '/teste';
     else window.location.href = '/gestao';
   };
 
-  // 🚀 LÓGICA DE FILTRO POR PERÍODO ATUALIZADA
   const filteredReports = reports.filter((r: any) => {
     const matchSector = selectedSector === 'TODOS' || r.setor === selectedSector;
     const matchStatus = statusFilter === 'TODOS' || r.status === statusFilter;
@@ -136,7 +137,6 @@ export default function DashboardDefinitiva() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-2">
-             {/* 🚀 NOVOS CAMPOS DE CALENDÁRIO */}
              <div className="flex flex-col items-center">
                 <p className="text-[7px] mb-1 text-slate-400">DATA INICIAL</p>
                 <input 
@@ -172,8 +172,9 @@ export default function DashboardDefinitiva() {
           </div>
 
           <div className="flex gap-2">
-            {userRole === 'gerente' && (
-              <button onClick={() => router.push('/')} className="bg-indigo-600 text-white px-6 py-3 rounded-xl text-[9px] shadow-md hover:bg-indigo-700 transition-all font-black uppercase italic">📋 TAREFAS</button>
+            {/* 🚀 LÓGICA DO BOTÃO TAREFAS ADAPTADA PARA O MODO TESTE */}
+            {(userRole === 'gerente' || userRole === 'teste_sistema') && (
+              <button onClick={() => router.push(userRole === 'gerente' ? '/' : '/teste')} className="bg-indigo-600 text-white px-6 py-3 rounded-xl text-[9px] shadow-md hover:bg-indigo-700 transition-all font-black uppercase italic">📋 TAREFAS</button>
             )}
             <button onClick={() => window.print()} className="bg-green-600 text-white px-6 py-3 rounded-xl text-[9px] shadow-md flex items-center gap-2 hover:bg-green-700 transition-all font-black uppercase italic">🖨️ IMPRIMIR</button>
             <button onClick={handleLogout} className="bg-slate-900 text-white px-6 py-3 rounded-xl text-[9px] shadow-md font-black uppercase italic">SAIR</button>

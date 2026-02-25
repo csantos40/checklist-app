@@ -54,13 +54,10 @@ const removeFromIndexedDB = async (key: string) => {
 };
 // -----------------------------------------------------------
 
-// 1. FILTRO DE SETORES CORRETO
-const SETORES_LISTA = [
-  "Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios e Laticínios)"
-];
+const SETORES_LISTA = ["Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios e Laticínios)"];
 
 // 2. TAREFAS
-const TASK_DATA = {
+const TASK_DATA: any = {
   'TESTE_SISTEMA': [
     { description: 'TESTE: Validar se a foto está subindo', periodicity: 'DIÁRIO' },
     { description: 'TESTE: Validar se a observação salva', periodicity: 'DIÁRIO' },
@@ -68,9 +65,17 @@ const TASK_DATA = {
   'Gerente': [
     { description: 'V.O. MANHÃ: Preços no sistema / PDV (Atualização de preços no sistema)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Balcões de padaria (abastecimento, precificação, qualidade, limpeza, equipamentos)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Balcões de frios (abastecimento, precificação, qualidade, limpeza, equipamentos)', periodicity: 'DIÁRIO' },
+    { 
+      description: 'V.O. MANHÃ: Balcões de frios (abastecimento, precificação, qualidade, limpeza, equipamentos)', 
+      periodicity: 'DIÁRIO',
+      subItems: ['FATIADOS', 'IOGURTES', 'MARGARINAS', 'EMBUTIDOS/MASSAS']
+    },
     { description: 'V.O. MANHÃ: REPOSIÇÃO (área de venda sem buracos), ver produtos em falta e repassar ao encarregado', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Balcões de açougue (abastecimento, precificação, qualidade, limpeza)', periodicity: 'DIÁRIO' },
+    { 
+      description: 'V.O. MANHÃ: Balcões de açougue (abastecimento, precificação, qualidade, limpeza)', 
+      periodicity: 'DIÁRIO',
+      subItems: ['LINGUIÇA', 'CARNE BOVINA', 'CARNE SUÍNA', 'PÃO DE ALHO'] 
+    },
     { description: 'V.O. MANHÃ: Bebidas frias geladeiras abastecidas constantes', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Cartazeamento dentro e fora da loja (Validade, descrição, local correto)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Depósito organizado e limpo', periodicity: 'DIÁRIO' },
@@ -126,7 +131,11 @@ const TASK_DATA = {
     { description: 'OPERAÇÃO: QUINTA - Recolher  lista de validades com encarregados dos setores', periodicity: 'SEMANAL' },
     { description: 'PREVENÇÃO: Lista de produtos com validade curta 15 dias (trabalhar com rebaixe de preço, exposição, cartazeamento, estoques) ', periodicity: 'SEMANAL' },
     { description: 'PREVENÇÃO: SEXTA 14:00h- Comercial - Lista de produtos com validade curta 7 dias (trabalhar com plano de ação, rebaixe de preço, exposição, cartazeamento, estoques)', periodicity: 'SEMANAL' },
-    { description: 'OPERAÇÃO: Balcão de frios', periodicity: 'DIÁRIO' },
+    { 
+      description: 'OPERAÇÃO: Balcão de frios', 
+      periodicity: 'DIÁRIO',
+      subItems: ['FATIADOS', 'QUEIJOS', 'MARGARINAS'] 
+    },
   ],
   'FLV': [
     { description: 'ABASTECIMENTO: Todas as bancas estão abastecidas?', periodicity: 'DIÁRIO' },
@@ -181,8 +190,21 @@ const TASK_DATA = {
   ]
 };
 
-export default function Home() {
+// 🚀 INJEÇÃO AUTOMÁTICA DE TODAS AS TAREFAS NO AMBIENTE DE TESTE
+TASK_DATA['TESTE_SISTEMA'] = [
+  ...TASK_DATA['TESTE_SISTEMA'],
+  ...TASK_DATA['Gerente'],
+  ...TASK_DATA['SubGerente'],
+  ...TASK_DATA['FLV'],
+  ...TASK_DATA['Mercearia'],
+  ...TASK_DATA['FLC (Frios e Laticínios)']
+];
+
+// 🚀 ADICIONADA A REAÇÃO AO AVISO DA ROTA DE TESTE (isTesteRoute)
+export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean }) {
   const router = useRouter();
+  const isTeste = isTesteRoute; 
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [department, setDepartment] = useState('');
   const [password, setPassword] = useState('');
@@ -198,7 +220,6 @@ export default function Home() {
 
   useEffect(() => { setSuppressHydration(true); }, []);
 
-  // 🚀 BLOQUEIO ANTI-ATUALIZAÇÃO ACIDENTAL
   useEffect(() => {
     const handleBeforeUnload = (e: any) => {
       if (isAuthenticated && !isLockedToday) {
@@ -213,10 +234,15 @@ export default function Home() {
   useEffect(() => {
     const authStatus = localStorage.getItem('user_auth');
     if (authStatus) {
-      const savedDept = authStatus.charAt(0).toUpperCase() + authStatus.slice(1);
-      if (SETORES_LISTA.includes(savedDept) || authStatus === 'gerente') {
-        setDepartment(savedDept === 'Gerente' ? 'Gerente' : savedDept);
+      if (authStatus === 'teste_sistema') {
+        setDepartment('TESTE_SISTEMA');
         setIsAuthenticated(true);
+      } else {
+        const savedDept = authStatus.charAt(0).toUpperCase() + authStatus.slice(1);
+        if (SETORES_LISTA.includes(savedDept) || authStatus === 'gerente') {
+          setDepartment(savedDept === 'Gerente' ? 'Gerente' : savedDept);
+          setIsAuthenticated(true);
+        }
       }
     }
   }, []);
@@ -241,7 +267,6 @@ export default function Home() {
     document.body.appendChild(script);
   }, []);
 
-  // 🚀 BUSCA INICIAL DE TAREFAS ADAPTADA PARA INDEXEDDB
   useEffect(() => {
     if (isAuthenticated && department) {
       const today = new Date().toLocaleDateString();
@@ -250,20 +275,39 @@ export default function Home() {
       
       const loadTasks = async () => {
         try {
-          const saved: any = await loadFromIndexedDB(`chk_vVivian_v8_${department}`);
+          // 🚀 MUDANÇA PARA 'v9': LIMPA O CACHE VELHO E FORÇA AS TAREFAS NOVAS A APARECEREM
+          const saved: any = await loadFromIndexedDB(`chk_vVivian_v9_${department}`);
+          // @ts-ignore
+          const allSectorTasks = TASK_DATA[department] || [];
+
           if (saved) { 
-            setTasks(saved); 
+            const updatedSaved = saved.map((s: any) => {
+               const model = allSectorTasks.find((t:any) => t.description === s.description);
+               if (model?.subItems && !s.subStatuses) {
+                  const subs: any = {};
+                  model.subItems.forEach((i:string) => subs[i] = 'Aguardando');
+                  return { ...s, subStatuses: subs };
+               }
+               return s;
+            });
+            setTasks(updatedSaved); 
           } else {
-            // @ts-ignore
-            const allSectorTasks = TASK_DATA[department] || [];
-            setTasks(allSectorTasks.map((t: any) => ({ 
-              ...t, 
-              status: 'Aguardando', 
-              observation: '', 
-              photos: [], 
-              frozen: false,
-              created_at: new Date().toISOString() 
-            })));
+            setTasks(allSectorTasks.map((t: any) => {
+              let initialSubStatuses = null;
+              if (t.subItems) {
+                initialSubStatuses = {};
+                t.subItems.forEach((item: string) => initialSubStatuses[item] = 'Aguardando');
+              }
+              return { 
+                ...t, 
+                status: 'Aguardando', 
+                observation: '', 
+                photos: [], 
+                frozen: false,
+                subStatuses: initialSubStatuses,
+                created_at: new Date().toISOString() 
+              };
+            }));
           }
         } catch (e) {
           console.error("Erro ao carregar do IndexedDB", e);
@@ -310,11 +354,11 @@ export default function Home() {
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  // 🚀 SALVAMENTO ADAPTADO PARA INDEXEDDB
   const saveState = async (newTasks: any[]) => {
     setTasks(newTasks);
     try {
-      await saveToIndexedDB(`chk_vVivian_v8_${department}`, newTasks);
+      // 🚀 SALVANDO NA v9
+      await saveToIndexedDB(`chk_vVivian_v9_${department}`, newTasks);
     } catch (e) {
       console.error("Erro ao salvar no IndexedDB", e);
     }
@@ -354,7 +398,35 @@ export default function Home() {
     } finally { setLoading(false); }
   };
 
-  // 🚀 CORREÇÃO DE CLIQUE COM INDEXOF
+  const handleSubStatusChange = (idx: number, subItem: string, clickedStatus: string) => {
+    const realIdx = tasks.indexOf(filteredTasks[idx]);
+    if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
+
+    const newTasks = [...tasks];
+    newTasks[realIdx].subStatuses[subItem] = newTasks[realIdx].subStatuses[subItem] === clickedStatus ? 'Aguardando' : clickedStatus;
+
+    const statuses = Object.values(newTasks[realIdx].subStatuses);
+    if (statuses.includes('Não Conforme')) {
+      newTasks[realIdx].status = 'Não Conforme';
+    } else if (statuses.includes('Aguardando')) {
+      newTasks[realIdx].status = 'Aguardando';
+    } else {
+      newTasks[realIdx].status = 'Conforme';
+    }
+
+    newTasks.forEach((task, tIdx) => {
+      if (tIdx !== realIdx && !task.frozen && task.status !== 'Aguardando') {
+        const canAutoFreeze = task.status === 'Conforme' || 
+                             (task.status === 'Não Conforme' && task.observation && task.photos?.length > 0);
+        if (canAutoFreeze && !task.subStatuses) {
+          newTasks[tIdx].frozen = true;
+        }
+      }
+    });
+
+    saveState(newTasks);
+  };
+
   const handleStatusChange = (idx: number, clickedStatus: string) => {
     const realIdx = tasks.indexOf(filteredTasks[idx]);
     if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
@@ -366,7 +438,7 @@ export default function Home() {
         const canAutoFreeze = task.status === 'Conforme' || 
                              (task.status === 'Não Conforme' && task.observation && task.photos?.length > 0);
         
-        if (canAutoFreeze) {
+        if (canAutoFreeze && !task.subStatuses) {
           newTasks[tIdx].frozen = true;
         }
       }
@@ -405,6 +477,11 @@ export default function Home() {
     const realIdx = tasks.indexOf(filteredTasks[idx]);
     if (realIdx === -1) return;
     const task = tasks[realIdx];
+    
+    if (task.subStatuses && Object.values(task.subStatuses).includes('Aguardando')) {
+       return alert("AVALIE TODOS OS BALCÕES ANTES DE FINALIZAR ESTA TAREFA!");
+    }
+
     if (task.status === 'Aguardando') return alert("SELECIONE O STATUS ANTES!");
     if (task.status === 'Não Conforme' && (!task.observation || !task.photos || task.photos.length === 0)) {
         return alert("NÃO CONFORME EXIGE OBSERVAÇÃO E FOTO!");
@@ -449,11 +526,19 @@ export default function Home() {
         
         const fotoUrlFinal = linksDasFotos.filter(Boolean).join(',');
 
+        let finalObservation = t.observation || '';
+        if (t.subStatuses && t.status === 'Não Conforme') {
+           const subDetails = Object.entries(t.subStatuses)
+              .map(([key, val]) => `${key}: ${val === 'Conforme' ? 'OK' : 'NC'}`)
+              .join(' | ');
+           finalObservation = `[${subDetails}] - ${t.observation}`;
+        }
+
         return { 
           setor: department, 
           tarefa: t.description, 
           status: t.status, 
-          observacao: t.observation, 
+          observacao: finalObservation, 
           foto_url: fotoUrlFinal,
           created_at: t.created_at 
         };
@@ -467,11 +552,11 @@ export default function Home() {
       setIsLockedToday(true);
       
       alert("SINCRONIZADO COM SUCESSO! BLOQUEADO ATÉ AMANHÃ.");
-      const resetTasks = tasks.map(t => t.periodicity === currentPeriodicity ? { ...t, status: 'Aguardando', observation: '', photos: [], frozen: false } : t);
+      const resetTasks = tasks.map(t => t.periodicity === currentPeriodicity ? { ...t, status: 'Aguardando', observation: '', photos: [], frozen: false, subStatuses: t.subItems ? t.subItems.reduce((acc:any, i:string)=>({...acc, [i]: 'Aguardando'}), {}) : null } : t);
       setTasks(resetTasks);
       
-      // 🚀 LIMPEZA DO INDEXEDDB APÓS ENVIO
-      await removeFromIndexedDB(`chk_vVivian_v8_${department}`);
+      // 🚀 LIMPANDO A v9 APÓS O ENVIO
+      await removeFromIndexedDB(`chk_vVivian_v9_${department}`);
     } catch (err) { alert("ERRO AO SINCRONIZAR"); } finally { setLoading(false); }
   };
 
@@ -488,7 +573,28 @@ export default function Home() {
   };
 
   if (!suppressHydration) return null;
+
   if (!isAuthenticated) {
+    if (isTeste) {
+       return (
+        <div className="min-h-screen bg-amber-500 flex items-center justify-center p-4 italic font-black text-slate-900 uppercase text-center">
+          <div className="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl border-t-8 border-slate-900 text-slate-900">
+            <div className="mb-10 flex flex-col items-center text-slate-900 font-black italic">
+               <div className="h-24 mb-6"><img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-slate-900 font-black italic" /></div>
+               <h1 className="text-4xl tracking-tighter italic uppercase text-slate-900 font-black italic">MODO TESTE 🛠️</h1>
+            </div>
+            <div className="space-y-6 text-slate-900 font-black italic">
+              <button onClick={() => setDepartment('TESTE_SISTEMA')} className={`w-full p-5 border-2 rounded-2xl font-bold uppercase text-xs transition-all ${department === 'TESTE_SISTEMA' ? 'bg-amber-500 text-black border-amber-500 shadow-md' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-amber-100'}`}>
+                {department === 'TESTE_SISTEMA' ? '✅ SETOR DE TESTE ATIVADO' : '👉 CLIQUE AQUI PARA ATIVAR O TESTE'}
+              </button>
+              <input type="password" placeholder="SENHA: teste123" className="w-full p-6 bg-slate-50 border-2 border-amber-500 rounded-2xl text-center text-2xl outline-none font-black text-slate-900 shadow-inner uppercase italic" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+              <button onClick={handleLogin} className="w-full bg-black text-white font-black py-6 rounded-2xl shadow-xl active:scale-95 text-xl italic uppercase font-black italic">ENTRAR NO TESTE</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 italic font-black text-slate-900 uppercase text-center">
         <div className="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl border-t-8 border-indigo-600 text-slate-900">
@@ -518,7 +624,9 @@ export default function Home() {
               <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-white font-black italic" />
               <div className="text-left leading-none border-l-2 border-indigo-500 pl-3 text-white font-black italic">
                 <h1 className="text-xl tracking-tighter font-black italic text-white font-black italic">{department}</h1>
-                <p className="text-[8px] text-indigo-400 tracking-widest mt-1 font-black italic uppercase text-white font-black italic">SISTEMA VIVIAN</p>
+                <p className={`text-[8px] tracking-widest mt-1 font-black italic uppercase text-white font-black italic ${isTeste ? 'text-amber-400' : 'text-indigo-400'}`}>
+                  {isTeste ? 'AMBIENTE DE TESTE' : 'SISTEMA VIVIAN'}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3 text-white font-black italic">
@@ -531,7 +639,12 @@ export default function Home() {
               {(department === 'Gerente' || department === 'TESTE_SISTEMA') && (
                 <button onClick={() => router.push('/dashboard')} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[9px] border border-indigo-500 font-black uppercase italic transition-all shadow-lg active:scale-95 font-black italic">📊 DASHBOARD</button>
               )}
-              <button onClick={() => { localStorage.removeItem('user_auth'); window.location.href = '/'; }} className="bg-slate-800 px-5 py-2 rounded-xl text-[10px] text-slate-400 hover:text-white transition-all font-black italic uppercase border border-slate-700 text-slate-300 font-black italic">Sair</button>
+              <button onClick={() => { 
+                  localStorage.removeItem('user_auth'); 
+                  window.location.href = isTeste ? '/teste' : '/'; 
+              }} className="bg-slate-800 px-5 py-2 rounded-xl text-[10px] text-slate-400 hover:text-white transition-all font-black italic uppercase border border-slate-700 text-slate-300 font-black italic">
+                  Sair
+              </button>
             </div>
           </div>
           <div className="flex gap-2 bg-slate-800 p-2 rounded-2xl max-w-md mx-auto shadow-inner overflow-x-auto no-scrollbar font-black italic text-white font-black italic">
@@ -571,6 +684,19 @@ export default function Home() {
                             <p className="text-xs italic font-bold text-slate-900 font-black italic">"{task.observation}"</p>
                          </div>
                          <button onClick={() => setResolvingTask(task)} className="w-full bg-green-600 text-white py-5 rounded-2xl font-black uppercase italic shadow-xl active:scale-95 text-sm transition-all text-white font-black italic">✓ RESOLVER ESTE PROBLEMA</button>
+                      </div>
+                    ) : task.subStatuses ? (
+                      <div className="space-y-2 pt-2 border-t border-slate-200">
+                        <p className="text-[9px] text-slate-400 font-bold uppercase mb-3">Avalie cada balcão individualmente:</p>
+                        {Object.keys(task.subStatuses).map(subItem => (
+                          <div key={subItem} className="flex justify-between items-center bg-white p-3 rounded-xl border-2 border-slate-100 shadow-sm">
+                            <span className="text-[10px] font-black text-slate-700">{subItem}</span>
+                            <div className="flex gap-2">
+                              <button disabled={task.frozen} onClick={() => handleSubStatusChange(idx, subItem, 'Conforme')} className={`px-3 py-2 rounded-lg text-[8px] border-2 transition-all font-black ${task.subStatuses[subItem] === 'Conforme' ? 'bg-green-600 text-white border-green-600 shadow-md' : 'bg-white text-slate-300 border-slate-100'}`}>CONFORME</button>
+                              <button disabled={task.frozen} onClick={() => handleSubStatusChange(idx, subItem, 'Não Conforme')} className={`px-3 py-2 rounded-lg text-[8px] border-2 transition-all font-black ${task.subStatuses[subItem] === 'Não Conforme' ? 'bg-red-600 text-white border-red-600 shadow-md' : 'bg-white text-slate-300 border-slate-100'}`}>NÃO CONFORME</button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <div className="flex gap-4 font-black italic">
