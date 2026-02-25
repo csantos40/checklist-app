@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 // --- 🚀 NOVO: FUNÇÕES DO BANCO DE DADOS LOCAL (INDEXEDDB) ---
 const DB_NAME = 'VivianAuditoriaDB';
@@ -76,7 +76,9 @@ const TASK_DATA: any = {
       periodicity: 'DIÁRIO',
       subItems: ['LINGUIÇA', 'CARNE BOVINA', 'CARNE SUÍNA', 'CARNE AVES', 'PÃO DE ALHO'] 
     },
-    { description: 'V.O. MANHÃ: Bebidas frias geladeiras abastecidas constantes', periodicity: 'DIÁRIO' },
+    { description: 'V.O. MANHÃ: Bebidas frias geladeiras abastecidas constantes', periodicity: 'DIÁRIO', 
+      subItems: ['GELADEIRAS FRENTE DE CAIXA', 'GELADEIRAS LINHA COCA-COLA', 'GELADEIRAS REFRIGERANTES/CERVEJAS'] 
+    },
     { description: 'V.O. MANHÃ: Cartazeamento dentro e fora da loja (Validade, descrição, local correto)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Depósito organizado e limpo', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Equipamentos em funcionamento (refrigeradores, freezers, iluminação...)', periodicity: 'DIÁRIO' },
@@ -112,9 +114,15 @@ const TASK_DATA: any = {
   'SubGerente': [
     { description: 'OPERAÇÃO: Acompanhar cotações', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: Apresentação pessoal da equipe (uniformes, maquiagem, cabelos) e escalas', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Balcões de açougue  (abastecimento, precificação, qualidade, limpeza)', periodicity: 'DIÁRIO' },
+     { 
+      description: 'V.O. MANHÃ: Balcões de açougue (abastecimento, precificação, qualidade, limpeza)', 
+      periodicity: 'DIÁRIO',
+      subItems: ['LINGUIÇA', 'CARNE BOVINA', 'CARNE SUÍNA', 'CARNE AVES', 'PÃO DE ALHO'] 
+    },
     { description: 'OPERAÇÃO: Balcões de padaria (abastecimento, precificação, qualidade, limpeza, equipamentos)', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Bebidas frias  geladeiras abastecidas constantes', periodicity: 'DIÁRIO' },
+    { description: 'V.O. MANHÃ: Bebidas frias geladeiras abastecidas constantes', periodicity: 'DIÁRIO', 
+      subItems: ['GELADEIRAS FRENTE DE CAIXA', 'GELADEIRAS LINHA COCA-COLA', 'GELADEIRAS REFRIGERANTES/CERVEJAS'] 
+    },
     { description: 'OPERAÇÃO: Cartazeamento dentro e fora da loja (Validade, descrição, local correto)', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: Corredores da área de venda (está livre para que o cliente consiga passar com os carrinhos)', periodicity: 'DIÁRIO' },
     { description: 'QUALIDADE: Depósito organizado e limpo', periodicity: 'DIÁRIO' },
@@ -134,7 +142,7 @@ const TASK_DATA: any = {
     { 
       description: 'OPERAÇÃO: Balcão de frios', 
       periodicity: 'DIÁRIO',
-      subItems: ['FATIADOS', 'QUEIJOS', 'MARGARINAS'] 
+      subItems: ['FATIADOS', 'QUEIJOS', 'MARGARINAS', 'EMBUTIDOS/MASSAS'] 
     },
   ],
   'FLV': [
@@ -200,10 +208,10 @@ TASK_DATA['TESTE_SISTEMA'] = [
   ...TASK_DATA['FLC (Frios e Laticínios)']
 ];
 
-// 🚀 ADICIONADA A REAÇÃO AO AVISO DA ROTA DE TESTE (isTesteRoute)
 export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean }) {
   const router = useRouter();
-  const isTeste = isTesteRoute; 
+  const pathname = usePathname(); 
+  const isTeste = isTesteRoute || pathname?.includes('/teste'); 
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [department, setDepartment] = useState('');
@@ -217,6 +225,9 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   const [isLockedToday, setIsLockedToday] = useState(false);
   const [resolvingTask, setResolvingTask] = useState<any>(null);
   const [tratativaTexto, setTratativaTexto] = useState('');
+  
+  // 🚀 ESTADO DA FILA OFFLINE
+  const [offlineCount, setOfflineCount] = useState(0);
 
   useEffect(() => { setSuppressHydration(true); }, []);
 
@@ -267,6 +278,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     document.body.appendChild(script);
   }, []);
 
+  // 🚀 BUSCAR TAREFAS E ITENS OFFLINE NO INÍCIO
   useEffect(() => {
     if (isAuthenticated && department) {
       const today = new Date().toLocaleDateString();
@@ -275,7 +287,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       
       const loadTasks = async () => {
         try {
-          // 🚀 MUDANÇA PARA 'v9': LIMPA O CACHE VELHO E FORÇA AS TAREFAS NOVAS A APARECEREM
+          // VERIFICAR FILA OFFLINE
+          const offlineData: any = await loadFromIndexedDB(`offline_sync_${department}`);
+          if (offlineData && offlineData.length > 0) setOfflineCount(offlineData.length);
+
           const saved: any = await loadFromIndexedDB(`chk_vVivian_v9_${department}`);
           // @ts-ignore
           const allSectorTasks = TASK_DATA[department] || [];
@@ -357,7 +372,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   const saveState = async (newTasks: any[]) => {
     setTasks(newTasks);
     try {
-      // 🚀 SALVANDO NA v9
       await saveToIndexedDB(`chk_vVivian_v9_${department}`, newTasks);
     } catch (e) {
       console.error("Erro ao salvar no IndexedDB", e);
@@ -491,8 +505,72 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     saveState(newTasks);
   };
 
+  // 🚀 LÓGICA DE SINCRONIZAÇÃO DA FILA OFFLINE
+  const syncOfflineData = async () => {
+    if (!navigator.onLine) return alert("📵 Você ainda está sem internet! Tente novamente quando houver sinal.");
+    if (!supabase) return;
+
+    setLoading(true);
+    try {
+      const offlineData: any = await loadFromIndexedDB(`offline_sync_${department}`) || [];
+      
+      for (const audit of offlineData) {
+        const payloads = await Promise.all(audit.tasks.map(async (t: any) => {
+          let linksDasFotos = [];
+          
+          if (t.photos && t.photos.length > 0) {
+            for (let i = 0; i < t.photos.length; i++) {
+              try {
+                const res = await fetch(t.photos[i]);
+                const blob = await res.blob();
+                const fileName = `${department.replace(/\s/g, '')}_${Date.now()}_${i}.jpg`;
+                
+                const { data, error } = await supabase.storage.from('checklist-fotos').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+                
+                if (data && !error) {
+                  const { data: pub } = supabase.storage.from('checklist-fotos').getPublicUrl(fileName);
+                  if (pub?.publicUrl) linksDasFotos.push(pub.publicUrl);
+                }
+              } catch (imgErr) { console.error("Falha ao subir foto offline."); }
+            }
+          }
+          
+          const fotoUrlFinal = linksDasFotos.filter(Boolean).join(',');
+
+          let finalObservation = t.observation || '';
+          if (t.subStatuses && t.status === 'Não Conforme') {
+             const subDetails = Object.entries(t.subStatuses)
+                .map(([key, val]) => `${key}: ${val === 'Conforme' ? 'OK' : 'NC'}`)
+                .join(' | ');
+             finalObservation = `[${subDetails}] - ${t.observation}`;
+          }
+
+          return { 
+            setor: department, 
+            tarefa: t.description, 
+            status: t.status, 
+            observacao: finalObservation, 
+            foto_url: fotoUrlFinal,
+            created_at: t.created_at 
+          };
+        }));
+
+        // @ts-ignore
+        await supabase.from('respostas').insert(payloads);
+      }
+
+      await removeFromIndexedDB(`offline_sync_${department}`);
+      setOfflineCount(0);
+      alert("🚀 TUDO SINCRONIZADO COM SUCESSO!");
+    } catch (e) {
+      alert("ERRO AO SINCRONIZAR FILA. TENTE NOVAMENTE.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const submitChecklist = async () => {
-    if (!supabase || isLockedToday) return;
+    if (isLockedToday) return;
 
     const currentPeriodTasks = tasks.filter(t => t.periodicity === currentPeriodicity);
     const unfrozenTasks = currentPeriodTasks.filter(t => !t.frozen);
@@ -501,6 +579,36 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       return alert(`FALTAM ${unfrozenTasks.length} TAREFAS PARA FINALIZAR NESTA AUDITORIA!`);
     }
 
+    // 🚀 INTERCEPTAÇÃO OFFLINE AQUI
+    if (!navigator.onLine) {
+      const isConfirmed = window.confirm("📵 Você está sem internet! Deseja salvar a auditoria na Fila Offline para sincronizar depois?");
+      if (!isConfirmed) return;
+
+      setLoading(true);
+      try {
+         const offlineData: any = await loadFromIndexedDB(`offline_sync_${department}`) || [];
+         offlineData.push({ date: new Date().toISOString(), tasks: currentPeriodTasks });
+         await saveToIndexedDB(`offline_sync_${department}`, offlineData);
+
+         const today = new Date().toLocaleDateString();
+         localStorage.setItem(`last_submit_date_${department}`, today);
+         setIsLockedToday(true);
+         setOfflineCount(offlineData.length);
+
+         const resetTasks = tasks.map(t => t.periodicity === currentPeriodicity ? { ...t, status: 'Aguardando', observation: '', photos: [], frozen: false, subStatuses: t.subItems ? t.subItems.reduce((acc:any, i:string)=>({...acc, [i]: 'Aguardando'}), {}) : null } : t);
+         setTasks(resetTasks);
+         await removeFromIndexedDB(`chk_vVivian_v9_${department}`);
+
+         alert("💾 SALVO NO MODO OFFLINE! Lembre-se de clicar em Sincronizar quando tiver internet.");
+      } catch (e) {
+         alert("ERRO AO SALVAR OFFLINE.");
+      } finally {
+         setLoading(false);
+      }
+      return;
+    }
+
+    // 🚀 ENVIO ONLINE NORMAL (Caso tenha internet)
     setLoading(true);
     try {
       const toSubmit = currentPeriodTasks;
@@ -555,9 +663,8 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       const resetTasks = tasks.map(t => t.periodicity === currentPeriodicity ? { ...t, status: 'Aguardando', observation: '', photos: [], frozen: false, subStatuses: t.subItems ? t.subItems.reduce((acc:any, i:string)=>({...acc, [i]: 'Aguardando'}), {}) : null } : t);
       setTasks(resetTasks);
       
-      // 🚀 LIMPANDO A v9 APÓS O ENVIO
       await removeFromIndexedDB(`chk_vVivian_v9_${department}`);
-    } catch (err) { alert("ERRO AO SINCRONIZAR"); } finally { setLoading(false); }
+    } catch (err) { alert("ERRO DE CONEXÃO! Verifique sua internet ou tente salvar no modo Offline."); } finally { setLoading(false); }
   };
 
   const filteredTasks = tasks.filter(t => currentPeriodicity === 'PENDÊNCIAS' ? t.status === 'Não Conforme' : t.periodicity === currentPeriodicity);
@@ -618,8 +725,11 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   return (
     <div className="min-h-screen bg-slate-100 p-2 md:p-8 font-sans font-black italic text-slate-900 uppercase">
       <div className="max-w-5xl mx-auto shadow-2xl rounded-[3.5rem] overflow-hidden bg-white min-h-[90vh] flex flex-col border border-slate-200">
-        <header className="bg-slate-900 p-8 text-white border-b border-slate-800 font-black italic">
-          <div className="flex justify-between items-center mb-8 text-white font-black italic">
+        
+        {/* 🚀 CABEÇALHO CORRIGIDO: Agora os botões não se atropelam em telas pequenas */}
+        <header className="bg-slate-900 p-6 md:p-8 text-white border-b border-slate-800 font-black italic">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6 text-white font-black italic">
+            
             <div className="flex items-center gap-4 h-12 text-white font-black italic">
               <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-white font-black italic" />
               <div className="text-left leading-none border-l-2 border-indigo-500 pl-3 text-white font-black italic">
@@ -629,7 +739,8 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-white font-black italic">
+
+            <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 text-white font-black italic">
               {totalNCPendentes > 0 && (
                 <div className="bg-amber-500 text-black px-4 py-1 rounded-lg animate-pulse flex flex-col items-center border-2 border-black font-black italic">
                   <p className="text-[7px] font-black italic">N.C. PENDENTES</p>
@@ -646,6 +757,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                   Sair
               </button>
             </div>
+
           </div>
           <div className="flex gap-2 bg-slate-800 p-2 rounded-2xl max-w-md mx-auto shadow-inner overflow-x-auto no-scrollbar font-black italic text-white font-black italic">
             {['DIÁRIO', 'SEMANAL', 'MENSAL', 'PENDÊNCIAS'].map(p => (
@@ -653,6 +765,16 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
             ))}
           </div>
         </header>
+
+        {/* 🚀 AVISO E BOTÃO DA FILA OFFLINE */}
+        {offlineCount > 0 && (
+          <div className="bg-amber-500 mx-6 mt-6 p-4 rounded-2xl flex justify-between items-center shadow-lg border-2 border-amber-600 font-black italic animate-in slide-in-from-top-4">
+            <p className="text-black text-[10px] uppercase leading-tight">⚠️ SINAL DE INTERNET PERDIDO: <br/> <span className="text-sm">{offlineCount} AUDITORIA(S) NA FILA</span></p>
+            <button onClick={syncOfflineData} disabled={loading} className="bg-black text-white px-5 py-3 rounded-xl text-[10px] uppercase shadow-md active:scale-95 transition-all font-black">
+              {loading ? 'ENVIANDO...' : 'SINCRONIZAR AGORA'}
+            </button>
+          </div>
+        )}
 
         <main className="p-6 space-y-6 flex-1 bg-white overflow-y-auto font-black italic">
           {isLockedToday && currentPeriodicity !== 'PENDÊNCIAS' ? (
@@ -722,10 +844,23 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                               {!task.frozen && (
                                   <label className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-600 text-white text-xl cursor-pointer shadow-md active:scale-95 transition-all border-2 border-white text-white font-black font-black italic">
                                     +
-                                    <input type="file" accept="image/*" capture="environment" className="hidden font-black italic" onChange={(e: any) => {
-                                      const reader = new FileReader();
-                                      reader.onloadend = () => handleAddPhoto(idx, reader.result);
-                                      reader.readAsDataURL(e.target.files[0]);
+                                    {/* 🚀 AQUI ACONTECE A MÁGICA DA COMPRESSÃO ANTES DE SALVAR */}
+                                    <input type="file" accept="image/*" capture="environment" className="hidden font-black italic" onChange={async (e: any) => {
+                                      const file = e.target.files[0];
+                                      if (!file) return;
+                                      try {
+                                        const imageCompression = (await import('browser-image-compression')).default;
+                                        const options = { maxSizeMB: 0.2, maxWidthOrHeight: 1024, useWebWorker: true };
+                                        const compressedFile = await imageCompression(file, options);
+                                        
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => handleAddPhoto(idx, reader.result);
+                                        reader.readAsDataURL(compressedFile);
+                                      } catch (error) {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => handleAddPhoto(idx, reader.result);
+                                        reader.readAsDataURL(file);
+                                      }
                                     }} />
                                   </label>
                               )}
