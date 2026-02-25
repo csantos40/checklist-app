@@ -74,7 +74,7 @@ const TASK_DATA: any = {
     { 
       description: 'V.O. MANHÃ: Balcões de açougue (abastecimento, precificação, qualidade, limpeza)', 
       periodicity: 'DIÁRIO',
-      subItems: ['LINGUIÇA', 'CARNE BOVINA', 'CARNE SUÍNA', 'PÃO DE ALHO'] 
+      subItems: ['LINGUIÇA', 'CARNE BOVINA', 'CARNE SUÍNA', 'CARNE AVES', 'PÃO DE ALHO'] 
     },
     { description: 'V.O. MANHÃ: Bebidas frias geladeiras abastecidas constantes', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Cartazeamento dentro e fora da loja (Validade, descrição, local correto)', periodicity: 'DIÁRIO' },
