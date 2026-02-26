@@ -231,6 +231,42 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
 
   useEffect(() => { setSuppressHydration(true); }, []);
 
+  // 🚀 SISTEMA DE ATUALIZAÇÃO NINJA (Invisível, automático e seguro)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      const checkForUpdates = () => {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (let reg of registrations) {
+            reg.update(); // Bate na Vercel para ver se tem novidade
+            reg.onupdatefound = () => {
+              const installingWorker = reg.installing;
+              if (installingWorker) {
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // Código novo baixado! Desregistra o velho e dá um "F5" sozinho
+                    reg.unregister().then(() => {
+                      window.location.reload();
+                    });
+                  }
+                };
+              }
+            };
+          }
+        });
+      };
+
+      // Roda quando a página abre a primeira vez
+      checkForUpdates();
+
+      // Roda invisivelmente toda vez que a pessoa minimiza o app e volta para ele
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          checkForUpdates();
+        }
+      });
+    }
+  }, []);
+
   useEffect(() => {
     const handleBeforeUnload = (e: any) => {
       if (isAuthenticated && !isLockedToday) {
@@ -278,7 +314,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     document.body.appendChild(script);
   }, []);
 
-  // 🚀 BUSCAR TAREFAS E ITENS OFFLINE NO INÍCIO
   useEffect(() => {
     if (isAuthenticated && department) {
       const today = new Date().toLocaleDateString();
@@ -287,7 +322,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       
       const loadTasks = async () => {
         try {
-          // VERIFICAR FILA OFFLINE
           const offlineData: any = await loadFromIndexedDB(`offline_sync_${department}`);
           if (offlineData && offlineData.length > 0) setOfflineCount(offlineData.length);
 
@@ -505,7 +539,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     saveState(newTasks);
   };
 
-  // 🚀 LÓGICA DE SINCRONIZAÇÃO DA FILA OFFLINE
   const syncOfflineData = async () => {
     if (!navigator.onLine) return alert("📵 Você ainda está sem internet! Tente novamente quando houver sinal.");
     if (!supabase) return;
@@ -579,7 +612,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       return alert(`FALTAM ${unfrozenTasks.length} TAREFAS PARA FINALIZAR NESTA AUDITORIA!`);
     }
 
-    // 🚀 INTERCEPTAÇÃO OFFLINE AQUI
     if (!navigator.onLine) {
       const isConfirmed = window.confirm("📵 Você está sem internet! Deseja salvar a auditoria na Fila Offline para sincronizar depois?");
       if (!isConfirmed) return;
@@ -608,7 +640,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       return;
     }
 
-    // 🚀 ENVIO ONLINE NORMAL (Caso tenha internet)
     setLoading(true);
     try {
       const toSubmit = currentPeriodTasks;
@@ -725,8 +756,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   return (
     <div className="min-h-screen bg-slate-100 p-2 md:p-8 font-sans font-black italic text-slate-900 uppercase">
       <div className="max-w-5xl mx-auto shadow-2xl rounded-[3.5rem] overflow-hidden bg-white min-h-[90vh] flex flex-col border border-slate-200">
-        
-        {/* 🚀 CABEÇALHO CORRIGIDO: Agora os botões não se atropelam em telas pequenas */}
         <header className="bg-slate-900 p-6 md:p-8 text-white border-b border-slate-800 font-black italic">
           <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6 text-white font-black italic">
             
@@ -747,9 +776,13 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                   <p className="text-sm leading-none font-black italic">{totalNCPendentes}</p>
                 </div>
               )}
+              
+              {/* BOTÃO DE ATUALIZAR REMOVIDO! O SISTEMA AGORA É NINJA E FAZ SOZINHO */}
+
               {(department === 'Gerente' || department === 'TESTE_SISTEMA') && (
                 <button onClick={() => router.push('/dashboard')} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[9px] border border-indigo-500 font-black uppercase italic transition-all shadow-lg active:scale-95 font-black italic">📊 DASHBOARD</button>
               )}
+              
               <button onClick={() => { 
                   localStorage.removeItem('user_auth'); 
                   window.location.href = isTeste ? '/teste' : '/'; 
@@ -844,7 +877,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                               {!task.frozen && (
                                   <label className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-600 text-white text-xl cursor-pointer shadow-md active:scale-95 transition-all border-2 border-white text-white font-black font-black italic">
                                     +
-                                    {/* 🚀 AQUI ACONTECE A MÁGICA DA COMPRESSÃO ANTES DE SALVAR */}
                                     <input type="file" accept="image/*" capture="environment" className="hidden font-black italic" onChange={async (e: any) => {
                                       const file = e.target.files[0];
                                       if (!file) return;
