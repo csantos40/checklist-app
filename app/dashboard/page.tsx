@@ -13,13 +13,17 @@ export default function DashboardDefinitiva() {
   const [startDate, setStartDate] = useState(''); 
   const [endDate, setEndDate] = useState(''); 
   const [selectedTask, setSelectedTask] = useState(null);
+  
+  // 🚀 NOVOS ESTADOS PARA A CAIXA DE OBSERVAÇÃO COMPARTILHADA
+  const [comentarioGestao, setComentarioGestao] = useState('');
+  const [salvandoComentario, setSalvandoComentario] = useState(false);
+  
   const router = useRouter();
 
   const SETORES_FILTRO = ["Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios e Laticínios)"];
 
   useEffect(() => {
     const authStatus = localStorage.getItem('user_auth');
-    // 🚀 ADICIONADO 'teste_sistema' PARA TER PERMISSÃO DE ENTRAR NO DASHBOARD
     if (authStatus === 'direcao' || authStatus === 'rh' || authStatus === 'gerente' || authStatus === 'teste_sistema') {
       setAuthorized(true);
       setUserRole(authStatus || ''); 
@@ -72,6 +76,45 @@ export default function DashboardDefinitiva() {
     };
   }, [supabase, authorized]);
 
+  // 🚀 CARREGA O COMENTÁRIO DO BANCO DE DADOS QUANDO ABRIR A TAREFA
+  useEffect(() => {
+    if (selectedTask) {
+      setComentarioGestao((selectedTask as any).comentario_gestao || '');
+    }
+  }, [selectedTask]);
+
+  // 🚀 FUNÇÃO PARA SALVAR O COMENTÁRIO NO SUPABASE
+  const salvarComentario = async () => {
+    if (!supabase || !selectedTask) return;
+    
+    setSalvandoComentario(true);
+    try {
+      const { error } = await (supabase as any)
+        .from('respostas')
+        .update({ comentario_gestao: comentarioGestao })
+        .eq('setor', (selectedTask as any).setor)
+        .eq('tarefa', (selectedTask as any).tarefa)
+        .eq('created_at', (selectedTask as any).created_at);
+
+      if (error) throw error;
+      
+      // Atualiza a tela imediatamente para não precisar recarregar
+      const updatedReports: any = reports.map((r: any) => 
+        r.created_at === (selectedTask as any).created_at && r.tarefa === (selectedTask as any).tarefa 
+          ? { ...r, comentario_gestao: comentarioGestao } 
+          : r
+      );
+      setReports(updatedReports);
+      setSelectedTask({ ...selectedTask, comentario_gestao: comentarioGestao } as any);
+      
+      alert("✅ Observação salva com sucesso! Todos já podem ver.");
+    } catch (err) {
+      alert("❌ Erro ao salvar observação. Tente novamente.");
+    } finally {
+      setSalvandoComentario(false);
+    }
+  };
+
   const calcularSLA = (dataCriacao: any) => {
     if (!dataCriacao) return 0;
     const hoje = new Date();
@@ -85,7 +128,6 @@ export default function DashboardDefinitiva() {
     localStorage.removeItem('user_auth');
     if (role === 'rh') window.location.href = '/rh';
     else if (role === 'gerente') window.location.href = '/';
-    // 🚀 SE FOR MODO TESTE, VOLTA PARA A TELA DE TESTE AO SAIR
     else if (role === 'teste_sistema') window.location.href = '/teste';
     else window.location.href = '/gestao';
   };
@@ -172,7 +214,6 @@ export default function DashboardDefinitiva() {
           </div>
 
           <div className="flex gap-2">
-            {/* 🚀 LÓGICA DO BOTÃO TAREFAS ADAPTADA PARA O MODO TESTE */}
             {(userRole === 'gerente' || userRole === 'teste_sistema') && (
               <button onClick={() => router.push(userRole === 'gerente' ? '/' : '/teste')} className="bg-indigo-600 text-white px-6 py-3 rounded-xl text-[9px] shadow-md hover:bg-indigo-700 transition-all font-black uppercase italic">📋 TAREFAS</button>
             )}
@@ -277,6 +318,32 @@ export default function DashboardDefinitiva() {
                     <p className="text-[8px] text-green-600 mb-2 font-black uppercase italic">Tratativa de Resolução:</p>
                     <p className="text-sm font-bold italic text-green-900 leading-relaxed uppercase">" {(selectedTask as any).observacao_resolucao} "</p>
                     <p className="text-[7px] text-green-500 mt-2 font-black italic">FINALIZADO EM: {new Date((selectedTask as any).resolvido_em).toLocaleString()}</p>
+                  </div>
+                )}
+                
+                {/* 🚀 NOVA CAIXA COMPARTILHADA (Aparece para pendências) */}
+                {(selectedTask as any).status === 'Não Conforme' && (
+                  <div className="bg-amber-100 p-6 rounded-[2rem] border-l-8 border-amber-400 mt-4 no-print">
+                    <div className="flex justify-between items-center mb-2">
+                       <p className="text-[8px] text-amber-700 font-black uppercase italic">📌 Observações da Gestão / Comunicação</p>
+                       <p className="text-[6px] text-amber-600 font-black uppercase italic bg-amber-200 px-2 py-1 rounded">Visível a Todos</p>
+                    </div>
+                    <textarea
+                      value={comentarioGestao}
+                      onChange={(e) => setComentarioGestao(e.target.value)}
+                      placeholder="Escreva orientações ou questionamentos sobre esta pendência..."
+                      className="w-full bg-white/70 border border-amber-300 rounded-xl p-4 text-xs text-amber-900 outline-none focus:bg-white transition-all min-h-[100px] italic font-bold placeholder:text-amber-400"
+                    />
+                    
+                    <div className="flex justify-end mt-3">
+                      <button 
+                        onClick={salvarComentario}
+                        disabled={salvandoComentario || comentarioGestao === ((selectedTask as any).comentario_gestao || '')}
+                        className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase italic shadow-md transition-all ${salvandoComentario || comentarioGestao === ((selectedTask as any).comentario_gestao || '') ? 'bg-amber-300 text-amber-600' : 'bg-amber-500 text-black hover:scale-105 active:scale-95'}`}
+                      >
+                        {salvandoComentario ? 'Salvando...' : 'Salvar Observação'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
