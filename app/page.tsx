@@ -68,7 +68,7 @@ const TASK_DATA: any = {
     { 
       description: 'V.O. MANHÃ: Balcões de frios (abastecimento, precificação, qualidade, limpeza, equipamentos)', 
       periodicity: 'DIÁRIO',
-      subItems: ['FATIADOS', 'IOGURTES', 'MARGARINAS', 'EMBUTIDOS/MASSAS']
+      subItems: ['FATIADOS', 'IOGURTES', 'MARGARINAS', 'EMBUTIDOS/MASSAS', 'GELADEIRAS/FREEZERS-SORVERTES']
     },
     { description: 'V.O. MANHÃ: REPOSIÇÃO (área de venda sem buracos), ver produtos em falta e repassar ao encarregado', periodicity: 'DIÁRIO' },
     { 
@@ -142,7 +142,7 @@ const TASK_DATA: any = {
     { 
       description: 'OPERAÇÃO: Balcão de frios', 
       periodicity: 'DIÁRIO',
-      subItems: ['FATIADOS', 'QUEIJOS', 'MARGARINAS', 'EMBUTIDOS/MASSAS'] 
+      subItems: ['FATIADOS', 'QUEIJOS', 'MARGARINAS', 'EMBUTIDOS/MASSAS', 'GELADEIRAS/FREEZERS-SORVERTES'] 
     },
   ],
   'FLV': [
@@ -353,11 +353,18 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
           const allSectorTasks = TASK_DATA[department] || [];
 
           if (saved) { 
+            // 🚀 INTELIGÊNCIA: Cruza os dados salvos com os subItems novos do código
             const updatedSaved = saved.map((s: any) => {
                const model = allSectorTasks.find((t:any) => t.description === s.description);
-               if (model?.subItems && !s.subStatuses) {
-                  const subs: any = {};
-                  model.subItems.forEach((i:string) => subs[i] = 'Aguardando');
+               
+               // Se a tarefa tem subItems no código, mas não no cofre (ou tem subItems novos faltando)
+               if (model?.subItems) {
+                  const subs: any = s.subStatuses || {};
+                  model.subItems.forEach((item: string) => {
+                     if (!subs[item]) {
+                        subs[item] = 'Aguardando'; // Injeta o item novo sem apagar os velhos
+                     }
+                  });
                   return { ...s, subStatuses: subs };
                }
                return s;
