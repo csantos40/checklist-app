@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
-// --- 🚀 NOVO: FUNÇÕES DO BANCO DE DADOS LOCAL (INDEXEDDB) ---
+// --- 🚀 FUNÇÕES DO BANCO DE DADOS LOCAL (INDEXEDDB) ---
 const DB_NAME = 'VivianAuditoriaDB';
 const STORE_NAME = 'checklists';
 
@@ -226,24 +226,49 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   const [resolvingTask, setResolvingTask] = useState<any>(null);
   const [tratativaTexto, setTratativaTexto] = useState('');
   
-  // 🚀 ESTADO DA FILA OFFLINE
   const [offlineCount, setOfflineCount] = useState(0);
+  
+  // 🚀 ESTADO PARA O BOTÃO SECRETO
+  const [clickCount, setClickCount] = useState(0);
 
   useEffect(() => { setSuppressHydration(true); }, []);
 
-  // 🚀 SISTEMA DE ATUALIZAÇÃO NINJA (Invisível, automático e seguro)
+  // 🚀 FUNÇÃO DO BOTÃO SECRETO NO LOGO COM MENSAGEM TRANQUILIZADORA
+  const handleSecretReset = () => {
+    const newCount = clickCount + 1;
+    setClickCount(newCount);
+    
+    if (newCount >= 5) {
+      const confirm = window.confirm("🕵️‍♂️ MODO DESENVOLVEDOR: Deseja forçar a atualização do aplicativo?\n\nFIQUE TRANQUILO(A): Suas fotos e textos já preenchidos NÃO serão perdidos. Eles estão seguros no cofre do celular e voltarão para a tela sozinhos!");
+      if (confirm) {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            registrations.forEach(reg => reg.unregister());
+            window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+          });
+        } else {
+          window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+        }
+      }
+      setClickCount(0); // Reseta o contador
+    }
+    
+    // Zera o contador se a pessoa demorar mais de 2 segundos para dar os 5 cliques
+    setTimeout(() => setClickCount(0), 2000);
+  };
+
+  // SISTEMA DE ATUALIZAÇÃO NINJA 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       const checkForUpdates = () => {
         navigator.serviceWorker.getRegistrations().then((registrations) => {
           for (let reg of registrations) {
-            reg.update(); // Bate na Vercel para ver se tem novidade
+            reg.update(); 
             reg.onupdatefound = () => {
               const installingWorker = reg.installing;
               if (installingWorker) {
                 installingWorker.onstatechange = () => {
                   if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // Código novo baixado! Desregistra o velho e dá um "F5" sozinho
                     reg.unregister().then(() => {
                       window.location.reload();
                     });
@@ -255,10 +280,8 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         });
       };
 
-      // Roda quando a página abre a primeira vez
       checkForUpdates();
 
-      // Roda invisivelmente toda vez que a pessoa minimiza o app e volta para ele
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           checkForUpdates();
@@ -413,7 +436,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   };
 
   const finalizarResolucao = async () => {
-    if (!supabase || !tratativaTexto) return alert("DESCREVA A TRATATIVA REALIZADA!");
+    if (!supabase || !tratativaTexto || tratativaTexto.trim().length < 10) return alert("DESCREVA A TRATATIVA REALIZADA COM MAIS DETALHES!");
     
     setLoading(true);
     try {
@@ -465,7 +488,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     newTasks.forEach((task, tIdx) => {
       if (tIdx !== realIdx && !task.frozen && task.status !== 'Aguardando') {
         const canAutoFreeze = task.status === 'Conforme' || 
-                             (task.status === 'Não Conforme' && task.observation && task.photos?.length > 0);
+                             (task.status === 'Não Conforme' && task.observation?.trim().length >= 15 && task.photos?.length > 0);
         if (canAutoFreeze && !task.subStatuses) {
           newTasks[tIdx].frozen = true;
         }
@@ -484,7 +507,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     newTasks.forEach((task, tIdx) => {
       if (tIdx !== realIdx && !task.frozen && task.status !== 'Aguardando') {
         const canAutoFreeze = task.status === 'Conforme' || 
-                             (task.status === 'Não Conforme' && task.observation && task.photos?.length > 0);
+                             (task.status === 'Não Conforme' && task.observation?.trim().length >= 15 && task.photos?.length > 0);
         
         if (canAutoFreeze && !task.subStatuses) {
           newTasks[tIdx].frozen = true;
@@ -531,9 +554,16 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     }
 
     if (task.status === 'Aguardando') return alert("SELECIONE O STATUS ANTES!");
-    if (task.status === 'Não Conforme' && (!task.observation || !task.photos || task.photos.length === 0)) {
-        return alert("NÃO CONFORME EXIGE OBSERVAÇÃO E FOTO!");
+    
+    if (task.status === 'Não Conforme') {
+        if (!task.photos || task.photos.length === 0) {
+            return alert("NÃO CONFORME EXIGE PELO MENOS UMA FOTO!");
+        }
+        if (!task.observation || task.observation.trim().length < 15) {
+            return alert("A RÉPLICA PARA O RH ESTÁ MUITO CURTA! Detalhe melhor o problema (Mínimo 15 caracteres).");
+        }
     }
+
     const newTasks = [...tasks];
     newTasks[realIdx].frozen = true;
     saveState(newTasks);
@@ -718,7 +748,9 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         <div className="min-h-screen bg-amber-500 flex items-center justify-center p-4 italic font-black text-slate-900 uppercase text-center">
           <div className="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl border-t-8 border-slate-900 text-slate-900">
             <div className="mb-10 flex flex-col items-center text-slate-900 font-black italic">
-               <div className="h-24 mb-6"><img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-slate-900 font-black italic" /></div>
+               <div className="h-24 mb-6 cursor-pointer" onClick={handleSecretReset}>
+                 <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-slate-900 font-black italic" />
+               </div>
                <h1 className="text-4xl tracking-tighter italic uppercase text-slate-900 font-black italic">MODO TESTE 🛠️</h1>
             </div>
             <div className="space-y-6 text-slate-900 font-black italic">
@@ -737,7 +769,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 italic font-black text-slate-900 uppercase text-center">
         <div className="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl border-t-8 border-indigo-600 text-slate-900">
           <div className="mb-10 flex flex-col items-center text-slate-900 font-black italic">
-             <div className="h-24 mb-6"><img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-slate-900 font-black italic" /></div>
+             {/* 🚀 BOTÃO SECRETO ESTÁ AQUI NO LOGO */}
+             <div className="h-24 mb-6 cursor-pointer" onClick={handleSecretReset}>
+                <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-slate-900 font-black italic" />
+             </div>
              <h1 className="text-4xl tracking-tighter italic uppercase text-slate-900 font-black italic">ACESSO VIVIAN</h1>
           </div>
           <div className="space-y-6 text-slate-900 font-black italic">
@@ -760,7 +795,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
           <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6 text-white font-black italic">
             
             <div className="flex items-center gap-4 h-12 text-white font-black italic">
-              <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-white font-black italic" />
+              {/* 🚀 BOTÃO SECRETO ESTÁ AQUI NO LOGO DO HEADER TAMBÉM */}
+              <div className="h-full cursor-pointer" onClick={handleSecretReset}>
+                <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-white font-black italic" />
+              </div>
               <div className="text-left leading-none border-l-2 border-indigo-500 pl-3 text-white font-black italic">
                 <h1 className="text-xl tracking-tighter font-black italic text-white font-black italic">{department}</h1>
                 <p className={`text-[8px] tracking-widest mt-1 font-black italic uppercase text-white font-black italic ${isTeste ? 'text-amber-400' : 'text-indigo-400'}`}>
@@ -776,8 +814,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                   <p className="text-sm leading-none font-black italic">{totalNCPendentes}</p>
                 </div>
               )}
-              
-              {/* BOTÃO DE ATUALIZAR REMOVIDO! O SISTEMA AGORA É NINJA E FAZ SOZINHO */}
 
               {(department === 'Gerente' || department === 'TESTE_SISTEMA') && (
                 <button onClick={() => router.push('/dashboard')} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[9px] border border-indigo-500 font-black uppercase italic transition-all shadow-lg active:scale-95 font-black italic">📊 DASHBOARD</button>
@@ -799,7 +835,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
           </div>
         </header>
 
-        {/* 🚀 AVISO E BOTÃO DA FILA OFFLINE */}
         {offlineCount > 0 && (
           <div className="bg-amber-500 mx-6 mt-6 p-4 rounded-2xl flex justify-between items-center shadow-lg border-2 border-amber-600 font-black italic animate-in slide-in-from-top-4">
             <p className="text-black text-[10px] uppercase leading-tight">⚠️ SINAL DE INTERNET PERDIDO: <br/> <span className="text-sm">{offlineCount} AUDITORIA(S) NA FILA</span></p>
@@ -820,7 +855,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
             filteredTasks.map((task, idx) => {
               const diasSLA = calcularSLA(task.created_at);
               return (
-                <div key={idx} className={`p-6 rounded-[2.5rem] border-2 transition-all relative font-black italic ${task.frozen ? 'opacity-50 grayscale bg-slate-100 border-slate-200 text-slate-900 font-black italic' : task.status === 'Não Conforme' ? 'border-red-500 bg-red-50/50 text-slate-900 font-black italic' : task.status === 'Conforme' ? 'border-green-400 bg-green-50/30 text-slate-900 font-black italic' : 'border-slate-100 bg-slate-50 text-slate-900 font-black italic'}`}>
+                <div key={idx} className={`p-6 rounded-[2.5rem] border-2 transition-all relative font-black italic ${task.frozen ? 'opacity-50 grayscale bg-slate-100 border-slate-200 text-slate-900 font-black italic' : task.status === 'Não Conforme' ? 'border-amber-400 bg-amber-50/50 text-slate-900 font-black italic' : task.status === 'Conforme' ? 'border-green-400 bg-green-50/30 text-slate-900 font-black italic' : 'border-slate-100 bg-slate-50 text-slate-900 font-black italic'}`}>
                   {task.frozen && <div className="absolute top-4 right-6 text-xl font-black italic">🔒</div>}
                   
                   {!task.frozen && task.status === 'Não Conforme' && (
@@ -833,9 +868,9 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                     <p className="text-lg leading-tight font-black italic uppercase text-slate-900 font-black italic">{task.description}</p>
                     
                     {currentPeriodicity === 'PENDÊNCIAS' ? (
-                      <div className="space-y-4 pt-4 border-t-2 border-red-200 text-slate-900 font-black italic">
-                         <div className="bg-red-50 p-4 rounded-2xl border-l-4 border-red-500 text-slate-900 font-black italic">
-                            <p className="text-[7px] text-red-500 font-black uppercase italic font-black italic">MOTIVO DA NÃO CONFORMIDADE:</p>
+                      <div className="space-y-4 pt-4 border-t-2 border-amber-200 text-slate-900 font-black italic">
+                         <div className="bg-amber-100 p-4 rounded-2xl border-l-4 border-amber-500 text-slate-900 font-black italic">
+                            <p className="text-[7px] text-amber-700 font-black uppercase italic font-black italic">RÉPLICA ENVIADA AO RH NO DIA DA AUDITORIA:</p>
                             <p className="text-xs italic font-bold text-slate-900 font-black italic">"{task.observation}"</p>
                          </div>
                          <button onClick={() => setResolvingTask(task)} className="w-full bg-green-600 text-white py-5 rounded-2xl font-black uppercase italic shadow-xl active:scale-95 text-sm transition-all text-white font-black italic">✓ RESOLVER ESTE PROBLEMA</button>
@@ -862,12 +897,28 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
 
                     {task.status !== 'Aguardando' && currentPeriodicity !== 'PENDÊNCIAS' && (
                       <div className="space-y-4 pt-4 border-t border-slate-200 font-black italic">
+                        
                         {task.status === 'Não Conforme' && (
                           <>
-                            <textarea disabled={task.frozen} placeholder="PLANO DE AÇÃO IMEDIATO..." className="w-full p-5 rounded-[2rem] border-2 border-red-200 text-black font-bold outline-none text-sm uppercase italic font-black shadow-inner bg-white font-black italic" value={task.observation} onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} />
+                            <div className="bg-amber-100 p-5 rounded-[2rem] border-2 border-amber-300 w-full mb-2">
+                              <p className="text-[10px] text-amber-800 font-black uppercase italic mb-2">🗣️ JUSTIFICATIVA / RÉPLICA PARA O RH:</p>
+                              <textarea 
+                                disabled={task.frozen} 
+                                placeholder="Explique detalhadamente o motivo para o RH..." 
+                                className="w-full p-4 rounded-2xl border border-amber-300 text-black font-bold outline-none text-sm uppercase italic shadow-inner bg-white min-h-[80px]" 
+                                value={task.observation} 
+                                onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} 
+                              />
+                              {!task.frozen && (
+                                <p className={`text-[8px] text-right mt-2 uppercase font-black ${task.observation?.length >= 15 ? 'text-green-600' : 'text-red-500'}`}>
+                                  {task.observation?.length || 0}/15 CARACTERES EXIGIDOS
+                                </p>
+                              )}
+                            </div>
+
                             <div className="flex flex-wrap gap-3 items-center font-black italic">
                               {task.photos?.map((p: string, pIdx: number) => (
-                                  <div key={pIdx} className="w-16 h-16 rounded-xl border-2 border-red-200 overflow-hidden shadow-sm relative font-black italic">
+                                  <div key={pIdx} className="w-16 h-16 rounded-xl border-2 border-amber-300 overflow-hidden shadow-sm relative font-black italic">
                                       <img src={p} className="w-full h-full object-cover font-black italic" />
                                       {!task.frozen && (
                                         <button onClick={() => handleRemovePhoto(idx, pIdx)} className="absolute top-0 right-0 bg-red-600 text-white w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded-bl-lg shadow-md text-white font-black font-black italic">X</button>
@@ -916,7 +967,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
           )}
         </main>
 
-        {/* MODAL DE TRATATIVA */}
         {resolvingTask && (
           <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200 text-slate-900 font-black italic">
             <div className="bg-white w-full max-w-lg rounded-[3rem] p-8 shadow-2xl border-t-8 border-green-500 text-slate-900 font-black italic">
