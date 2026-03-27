@@ -123,6 +123,30 @@ export default function DashboardDefinitiva() {
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  // 🚀 NOVA LÓGICA DO RADAR DO RH (Cálculo de Inadimplência)
+  const calcularDiasSemPreencher = (dataIso: string | null) => {
+    if (!dataIso) return Infinity;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas os dias
+    const criacao = new Date(dataIso);
+    criacao.setHours(0, 0, 0, 0);
+    const diffTime = hoje.getTime() - criacao.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const statusSetores = SETORES_FILTRO.map(setor => {
+    const reportsSetor = reports.filter((r: any) => r.setor === setor);
+    if (reportsSetor.length === 0) {
+      return { setor, diasAtraso: Infinity, ultimaData: null };
+    }
+    const ultimoReport = reportsSetor[0]; // Como os reports já vêm ordenados do mais novo pro mais velho
+    const diasAtraso = calcularDiasSemPreencher((ultimoReport as any).created_at);
+    return { setor, diasAtraso, ultimaData: (ultimoReport as any).created_at };
+  });
+
+  // Filtra apenas os setores que estão com 1 ou mais dias de atraso
+  const setoresAtrasados = statusSetores.filter(s => s.diasAtraso > 0);
+
   const handleLogout = () => {
     const role = localStorage.getItem('user_auth');
     localStorage.removeItem('user_auth');
@@ -221,6 +245,35 @@ export default function DashboardDefinitiva() {
             <button onClick={handleLogout} className="bg-slate-900 text-white px-6 py-3 rounded-xl text-[9px] shadow-md font-black uppercase italic">SAIR</button>
           </div>
         </header>
+
+        {/* 🚀 RADAR DO RH - ALERTA DE INADIMPLÊNCIA */}
+        {setoresAtrasados.length > 0 && (
+          <div className="bg-red-50 border-2 border-red-500 rounded-[2rem] p-6 shadow-sm no-print mb-6">
+            <div className="flex items-center gap-3 mb-4">
+               <div className="bg-red-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-xl animate-pulse">⚠️</div>
+               <div>
+                 <h2 className="text-red-700 text-lg font-black uppercase italic tracking-tighter">Radar RH: Inadimplência</h2>
+                 <p className="text-red-500 text-[10px] uppercase font-bold italic">Setores que não realizaram a auditoria hoje</p>
+               </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {setoresAtrasados.map(s => (
+                <div key={s.setor} className="bg-white border-2 border-red-200 p-4 rounded-2xl flex items-center gap-4 shadow-sm min-w-[200px]">
+                   <div className="flex-1">
+                     <p className="text-xs text-slate-800 font-black uppercase italic leading-tight">{s.setor}</p>
+                     <p className="text-[9px] text-slate-400 font-bold uppercase italic mt-1">
+                       Último envio: {s.ultimaData ? new Date(s.ultimaData).toLocaleDateString() : 'Nunca Preenchido'}
+                     </p>
+                   </div>
+                   <div className="bg-red-100 text-red-700 px-3 py-2 rounded-xl text-center">
+                     <p className="text-xl font-black italic leading-none">{s.diasAtraso === Infinity ? '∞' : s.diasAtraso}</p>
+                     <p className="text-[6px] uppercase font-black italic">Dias Atrás</p>
+                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2 justify-center bg-white p-4 rounded-[1.5rem] shadow-sm border border-slate-100">
           <button onClick={() => {setSelectedSector('TODOS'); setStatusFilter('TODOS'); setStartDate(''); setEndDate('');}} className={`px-4 py-2 rounded-lg text-[9px] border-2 transition-all ${selectedSector === 'TODOS' && statusFilter === 'TODOS' && startDate === '' && endDate === '' ? 'bg-black text-white border-black' : 'bg-white text-slate-400 border-slate-50'}`}>RESETAR TUDO</button>

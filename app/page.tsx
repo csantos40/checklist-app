@@ -230,8 +230,80 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   
   // 🚀 ESTADO PARA O BOTÃO SECRETO
   const [clickCount, setClickCount] = useState(0);
+  
+  // 🚀 ESTADO PARA O LIMITADOR DE HORÁRIO
+  const [foraDoHorario, setForaDoHorario] = useState(false);
 
   useEffect(() => { setSuppressHydration(true); }, []);
+
+  // 🚀 FUNÇÃO EXPLÍCITA PARA RESETAR O APP NO MODO TESTE (NOVO)
+  const resetarAppDeTeste = () => {
+    const confirm = window.confirm("🧹 Deseja apagar todas as tarefas preenchidas e resetar o aplicativo de teste?");
+    if (confirm) {
+      localStorage.clear();
+      sessionStorage.clear();
+      const request = indexedDB.deleteDatabase('VivianAuditoriaDB');
+      
+      request.onsuccess = () => {
+        window.location.href = window.location.pathname + '?reset=' + new Date().getTime();
+      };
+      request.onerror = () => {
+        window.location.href = window.location.pathname + '?reset=' + new Date().getTime();
+      };
+    }
+  };
+
+  // 🚀 LIMITADOR DE HORÁRIO DE TRABALHO
+  useEffect(() => {
+    const verificarHorario = () => {
+      if (!department) return;
+      const horaAtual = new Date().getHours();
+      
+      if (department === 'SubGerente') {
+        // SubGerente das 11h às 21h
+        setForaDoHorario(horaAtual < 11 || horaAtual >= 21);
+      } else if (['Gerente', 'FLV', 'Mercearia', 'FLC (Frios e Laticínios)'].includes(department)) {
+        // Demais setores das 07h às 18h
+        setForaDoHorario(horaAtual < 7 || horaAtual >= 18);
+      } else {
+        // TESTE_SISTEMA não tem bloqueio
+        setForaDoHorario(false);
+      }
+    };
+
+    verificarHorario();
+    const intervalo = setInterval(verificarHorario, 60000); // Verifica a cada minuto
+    return () => clearInterval(intervalo);
+  }, [department]);
+
+  // 🚀 ALARME DE VIRADA DE DIA 
+  useEffect(() => {
+    const verificarViradaDeDia = () => {
+      const dataAtual = new Date().toLocaleDateString('pt-BR');
+      const dataSalva = localStorage.getItem('dataUltimoChecklist');
+
+      if (dataSalva !== dataAtual) {
+        console.log('Novo dia detectado. Limpando dados de ontem...');
+        
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        const request = indexedDB.deleteDatabase('VivianAuditoriaDB');
+        
+        request.onsuccess = () => {
+          localStorage.setItem('dataUltimoChecklist', dataAtual);
+          window.location.reload();
+        };
+        
+        request.onerror = () => {
+          localStorage.setItem('dataUltimoChecklist', dataAtual);
+          window.location.reload();
+        };
+      }
+    };
+
+    verificarViradaDeDia();
+  }, []);
 
   // 🚀 FUNÇÃO DO BOTÃO SECRETO NO LOGO COM MENSAGEM TRANQUILIZADORA
   const handleSecretReset = () => {
@@ -640,6 +712,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   };
 
   const submitChecklist = async () => {
+    if (foraDoHorario) return alert("FORA DO HORÁRIO PERMITIDO PARA O SEU SETOR!");
     if (isLockedToday) return;
 
     const currentPeriodTasks = tasks.filter(t => t.periodicity === currentPeriodicity);
@@ -766,6 +839,12 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
               </button>
               <input type="password" placeholder="SENHA: teste123" className="w-full p-6 bg-slate-50 border-2 border-amber-500 rounded-2xl text-center text-2xl outline-none font-black text-slate-900 shadow-inner uppercase italic" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
               <button onClick={handleLogin} className="w-full bg-black text-white font-black py-6 rounded-2xl shadow-xl active:scale-95 text-xl italic uppercase font-black italic">ENTRAR NO TESTE</button>
+              
+              {/* 🚀 BOTÃO DE RESET NA TELA DE LOGIN DE TESTE */}
+              <button onClick={resetarAppDeTeste} className="w-full bg-red-600 text-white font-black py-4 rounded-2xl shadow-xl active:scale-95 text-sm italic uppercase mt-4">
+                🧹 ZERAR DADOS DO APP
+              </button>
+
             </div>
           </div>
         </div>
@@ -822,6 +901,13 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                 </div>
               )}
 
+              {/* 🚀 BOTÃO DE RESET DENTRO DO APP (SÓ NO MODO TESTE) */}
+              {isTeste && (
+                 <button onClick={resetarAppDeTeste} className="bg-red-600 px-4 py-2 rounded-xl text-[9px] text-white transition-all font-black uppercase shadow-lg active:scale-95">
+                   🧹 Resetar Teste
+                 </button>
+              )}
+
               {(department === 'Gerente' || department === 'TESTE_SISTEMA') && (
                 <button onClick={() => router.push('/dashboard')} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[9px] border border-indigo-500 font-black uppercase italic transition-all shadow-lg active:scale-95 font-black italic">📊 DASHBOARD</button>
               )}
@@ -852,7 +938,15 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         )}
 
         <main className="p-6 space-y-6 flex-1 bg-white overflow-y-auto font-black italic">
-          {isLockedToday && currentPeriodicity !== 'PENDÊNCIAS' ? (
+          {foraDoHorario && currentPeriodicity !== 'PENDÊNCIAS' ? (
+            <div className="text-center py-20 text-slate-900 font-black italic">
+               <div className="text-6xl mb-4 font-black italic">⏰</div>
+               <h2 className="text-2xl italic uppercase font-black text-slate-900 font-black italic">FORA DO HORÁRIO</h2>
+               <p className="text-slate-400 text-sm mt-2 font-bold uppercase italic font-black italic">
+                 SEU SETOR RESPONDE DAS {department === 'SubGerente' ? '11H ÀS 21H' : '07H ÀS 18H'}.
+               </p>
+            </div>
+          ) : isLockedToday && currentPeriodicity !== 'PENDÊNCIAS' ? (
             <div className="text-center py-20 text-slate-900 font-black italic">
                <div className="text-6xl mb-4 font-black italic">🔒</div>
                <h2 className="text-2xl italic uppercase font-black text-slate-900 font-black italic">AUDITORIA CONCLUÍDA</h2>
@@ -991,7 +1085,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
           </div>
         )}
 
-        {!isLockedToday && currentPeriodicity !== 'PENDÊNCIAS' && (
+        {!isLockedToday && !foraDoHorario && currentPeriodicity !== 'PENDÊNCIAS' && (
           <footer className="p-8 bg-slate-50 text-center border-t border-slate-200 rounded-b-[3.5rem] font-black italic">
             <button onClick={submitChecklist} disabled={loading} className={`w-full py-7 rounded-[2.5rem] shadow-xl text-xl transition-all active:scale-95 font-black italic uppercase border-b-8 font-black italic ${loading ? 'bg-slate-400 border-slate-500 font-black italic' : 'bg-black text-white border-slate-800 hover:bg-slate-900 font-black italic'} text-white font-black italic`}>
               {loading ? 'SINCRONIZANDO...' : `FINALIZAR AUDITORIA`}
