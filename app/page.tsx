@@ -107,7 +107,7 @@ const TASK_DATA: any = {
     { description: 'MENSAL: Perdas (top 5 perdas por setor e traçar plano de ação)', periodicity: 'MENSAL' },
     { description: 'MENSAL: Divergências no recebimento (Entender o motivo para resolução)', periodicity: 'MENSAL' },
     { description: 'MENSAL: Gerenciar produtos próximos do vencimento com exposição agressiva', periodicity: 'MENSAL' },
-    { description: 'MENSAL: Acompanhar cotações', periodicity: 'DIÁRIO' },
+    { description: 'Acompanhar cotações', periodicity: 'DIÁRIO' },
     { description: 'MENSAL: Elaborar relatórios semanais das vendas das cotações', periodicity: 'MENSAL' },
     { description: 'MENSAL: Perdas e itens sem giro (Reunião com Prevenção - plano de ação)', periodicity: 'MENSAL' },
   ],
