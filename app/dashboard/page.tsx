@@ -20,7 +20,7 @@ export default function DashboardDefinitiva() {
   
   const router = useRouter();
 
-  const SETORES_FILTRO = ["Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios e Laticínios)"];
+  const SETORES_FILTRO = ["Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios e Laticínios)", "Padaria-Confeitaria-Rotisseria"];
 
   useEffect(() => {
     const authStatus = localStorage.getItem('user_auth');
@@ -123,11 +123,11 @@ export default function DashboardDefinitiva() {
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  // 🚀 NOVA LÓGICA DO RADAR DO RH (Cálculo de Inadimplência)
+  // 🚀 LÓGICA DO RADAR DO RH (Cálculo de Inadimplência)
   const calcularDiasSemPreencher = (dataIso: string | null) => {
     if (!dataIso) return Infinity;
     const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas os dias
+    hoje.setHours(0, 0, 0, 0); 
     const criacao = new Date(dataIso);
     criacao.setHours(0, 0, 0, 0);
     const diffTime = hoje.getTime() - criacao.getTime();
@@ -139,12 +139,11 @@ export default function DashboardDefinitiva() {
     if (reportsSetor.length === 0) {
       return { setor, diasAtraso: Infinity, ultimaData: null };
     }
-    const ultimoReport = reportsSetor[0]; // Como os reports já vêm ordenados do mais novo pro mais velho
+    const ultimoReport = reportsSetor[0]; 
     const diasAtraso = calcularDiasSemPreencher((ultimoReport as any).created_at);
     return { setor, diasAtraso, ultimaData: (ultimoReport as any).created_at };
   });
 
-  // Filtra apenas os setores que estão com 1 ou mais dias de atraso
   const setoresAtrasados = statusSetores.filter(s => s.diasAtraso > 0);
 
   const handleLogout = () => {
