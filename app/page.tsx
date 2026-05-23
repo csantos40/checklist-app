@@ -780,17 +780,19 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     const realIdx = tasks.indexOf(filteredTasks[idx]);
     if (realIdx === -1) return;
     const task = tasks[realIdx];
+    
     if (task.subStatuses && Object.values(task.subStatuses).includes('Aguardando')) return alert("AVALIE TODOS OS BALCÕES ANTES DE FINALIZAR ESTA TAREFA!");
     if (task.status === 'Aguardando') return alert("SELECIONE O STATUS ANTES!");
-    
+
+    // --- REGRA DE FOTOS LIMPA E DEFINITIVA ---
+
     // REGRA 1: NÃO CONFORME (Todos os setores)
     if (task.status === 'Não Conforme') {
         if (!task.photos || task.photos.length === 0) return alert("NÃO CONFORME EXIGE PELO MENOS UMA FOTO!");
         if (!task.observation || task.observation.trim().length < 15) return alert("A RÉPLICA PARA O RH ESTÁ MUITO CURTA! Detalhe melhor o problema (Mínimo 15 caracteres).");
-    }
-
-    // REGRA 2: CONFORME (Apenas setor de Padaria)
-    if (task.status === 'Conforme') {
+    } 
+    // REGRA 2: CONFORME (Apenas Padaria)
+    else if (task.status === 'Conforme') {
         if (department === 'Padaria-Confeitaria-Rotisseria') {
             if (!task.photos || task.photos.length === 0) return alert("📸 A Padaria exige anexar foto obrigatória em todas as tarefas, inclusive nas Conformes!");
         }
