@@ -921,15 +921,19 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       return;
     }
 
-    // 🚀 LÓGICA ORIGINAL DE SALVAMENTO PARA OS OUTROS SETORES
+    // 🚀 LÓGICA DE SALVAMENTO PARA OS OUTROS SETORES
     const currentPeriodTasks = tasks.filter(t => t.periodicity === currentPeriodicity);
     const unfrozenTasks = currentPeriodTasks.filter(t => !t.frozen);
     if (unfrozenTasks.length > 0) return alert(`FALTAM ${unfrozenTasks.length} TAREFAS PARA FINALIZAR NESTA AUDITORIA!`);
     
+    // --- CORREÇÃO AQUI: FOTO OBRIGATÓRIA GERAL APENAS PARA A PADARIA ---
+    const ehPadaria = department === 'Padaria-Confeitaria-Rotisseria';
     const temAlgumaFoto = currentPeriodTasks.some(t => t.photos && t.photos.length > 0);
-    if (!temAlgumaFoto && currentPeriodicity !== 'TOP 10') {
-       return alert("📸 Você não bateu nenhuma foto hoje.\n\nPara validar esse check-list, precisamos que você poste pelo menos uma foto que demonstre que a atividade foi efetuada com sucesso no seu setor.");
+
+    if (ehPadaria && !temAlgumaFoto && currentPeriodicity !== 'TOP 10') {
+       return alert("📸 A Padaria exige pelo menos uma foto para finalizar a auditoria.");
     }
+    // --------------------------------------------------------
 
     if (isTeste) {
       const today = new Date().toLocaleDateString();
