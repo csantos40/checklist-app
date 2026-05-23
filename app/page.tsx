@@ -212,7 +212,7 @@ const TASK_DATA: any = {
       subItems: ['GELADEIRAS FRENTE DE CAIXA', 'GELADEIRAS LINHA COCA-COLA', 'GELADEIRAS REFRIGERANTES/CERVEJAS'] 
     },
     { description: 'V.O. MANHÃ: Cartazeamento dentro e fora da loja (Validade, descrição, local correto)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Depósito organizado e limpo', periodicity: 'DIÁRIO' },
+    { description: 'V.O. MANHÃ: Depósito organized e limpo', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Equipamentos em funcionamento (refrigeradores, freezers, iluminação...)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Hortifruti (Qualidade, precificação, abastecimento, cartazeamento)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Limpeza e organização dos banheiros e frente de caixa', periodicity: 'DIÁRIO' },
@@ -268,7 +268,7 @@ const TASK_DATA: any = {
     { description: 'OPERAÇÃO: Pontas de gôndulas (Abastecimento, troca de preços, cartazeamento, validade da ação) - sugerir troca', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: Precificação (todos os produtos com a etiqueta de preço)', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: REPOSIÇÃO (área de venda sem buracos), ver produtos em falta na área de venda e repassar ao encarregado da reposição', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: QUINTA - Recolher  lista de validades com encarregados dos setores', periodicity: 'SEMANAL' },
+    { description: 'OPERAÇÃO: QUINTA - Recolher lista de validades com encarregados dos setores', periodicity: 'SEMANAL' },
     { description: 'PREVENÇÃO: Lista de produtos com validade curta 15 dias (trabalhar com rebaixe de preço, exposição, cartazeamento, estoques) ', periodicity: 'SEMANAL' },
     { description: 'PREVENÇÃO: SEXTA 14:00h- Comercial - Lista de produtos com validade curta 7 dias (trabalhar com plano de ação, rebaixe de preço, exposição, cartazeamento, estoques)', periodicity: 'SEMANAL' },
     { 
@@ -318,7 +318,7 @@ const TASK_DATA: any = {
     { description: 'OPERAÇÃO: As geladeiras estão limpas?', periodicity: 'DIÁRIO' },
     { description: 'OPERAÇÃO: Todos os produtos possui etiquetas de preço?', periodicity: 'DIÁRIO' },
     { description: 'LIMPEZA: Limpeza e organização das cameras frias?', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Acompanhamento da movimentação dos retalhos dos queijos?', periodicity: 'DIÁRIO' },
+    { description: 'OPERAÇÃO: Acompanhamento do movimento dos retalhos dos queijos?', periodicity: 'DIÁRIO' },
     { description: 'LIMPEZA: Limpeza e organização da aréa de manipulação de fatiados e seus utensilios?', periodicity: 'DIÁRIO' },
     { description: 'VENDAS: Acompanhamento das vendas do setor, sendo do dia anterior versus a meta?', periodicity: 'DIÁRIO' },
     { description: 'VENDAS: Verificação da lista de ofertas?', periodicity: 'DIÁRIO' },
@@ -434,7 +434,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     const updateList = (list: any[]) => list.map(item => {
         if (item.id === id) {
             const newStatuses = { ...(item.statuses || {}) };
-            newStatuses[time] = newStatuses[time] === status ? null : status; // Permite desmarcar se clicar novamente
+            newStatuses[time] = newStatuses[time] === status ? null : status; 
             return { ...item, statuses: newStatuses };
         }
         return item;
@@ -446,8 +446,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   };
 
   const handleAddTop10 = (item: any) => {
-    // Substitua na função handleAddTop10
-let currentList: any[] = [];
+    let currentList: any[] = [];
     if (activeTop10Category === 'Padaria') currentList = [...top10Padaria];
     if (activeTop10Category === 'Rotisseria') currentList = [...top10Rotisseria];
     if (activeTop10Category === 'Confeitaria') currentList = [...top10Confeitaria];
@@ -647,13 +646,11 @@ let currentList: any[] = [];
             setTasks(updatedSaved); 
           } else {
             setTasks(allSectorTasks.map((t: any) => {
-              // Dentro da função loadTasks, no useEffect que carrega as tarefas
-let initialSubStatuses: Record<string, string> | null = null;
-
-if (t.subItems) {
-  initialSubStatuses = {};
-  t.subItems.forEach((item: string) => (initialSubStatuses as Record<string, string>)[item] = 'Aguardando');
-}
+              let initialSubStatuses: Record<string, string> | null = null;
+              if (t.subItems) {
+                initialSubStatuses = {};
+                t.subItems.forEach((item: string) => (initialSubStatuses as Record<string, string>)[item] = 'Aguardando');
+              }
               return { 
                 ...t, 
                 status: 'Aguardando', 
@@ -787,8 +784,10 @@ if (t.subItems) {
     if (task.status === 'Aguardando') return alert("SELECIONE O STATUS ANTES!");
     
     const isPrecificacao = task.description.toLowerCase().includes('precifica') || task.description.toLowerCase().includes('preço') || task.description.toLowerCase().includes('cartaz');
-    if (isPrecificacao && (!task.photos || task.photos.length === 0)) {
-        return alert("📸 Você não bateu sua foto hoje.\n\nPara validar esse check-list, precisamos que você poste uma foto que demonstre que a atividade foi efetuada com sucesso. (Foto em tempo real).\n\nObs: Caso seja uma tarefa de precificação é obrigatório a foto.");
+    const ehPadaria = department === 'Padaria-Confeitaria-Rotisseria';
+    
+    if ((isPrecificacao || (ehPadaria && task.status === 'Conforme')) && (!task.photos || task.photos.length === 0)) {
+        return alert("📸 Foto obrigatória para finalizar esta tarefa.");
     }
 
     if (task.status === 'Não Conforme') {
@@ -803,13 +802,11 @@ if (t.subItems) {
   const syncOfflineData = async () => {
     if (!navigator.onLine) return alert("📵 Você ainda está sem internet! Tente novamente quando houver sinal.");
     
-    // --- TRAVA DE MODO TESTE ---
     if (isTeste) {
       await removeFromIndexedDB(`offline_sync_${department}`);
       setOfflineCount(0);
       return alert("🚀 TUDO SINCRONIZADO COM SUCESSO (AMBIENTE DE TESTE - DADOS NÃO FORAM PARA O SUPABASE)!");
     }
-    // ---------------------------
 
     if (!supabase) return;
     setLoading(true);
@@ -858,28 +855,24 @@ if (t.subItems) {
       const todosTop10 = [...top10Padaria, ...top10Rotisseria, ...top10Confeitaria];
       if (todosTop10.length === 0) return alert("Adicione produtos ao TOP 10 antes de salvar!");
       
-      // TRAVA 1: Obrigatoriedade de Foto
       const faltamFotos = todosTop10.filter(item => !item.photo);
       if (faltamFotos.length > 0) {
           return alert(`⚠️ AÇÃO BLOQUEADA: Faltam fotos em ${faltamFotos.length} produto(s) do TOP 10! É obrigatório anexar foto para todos os itens da Curva A.`);
       }
 
-      // TRAVA 2: Obrigatoriedade de clicar nas caixas (S/N)
       const faltamStatus = todosTop10.filter(item => {
         if (!item.statuses) return true;
-        const marcacoes = Object.values(item.statuses); // Ex: [null, null, null, null] se não clicou em nada
-        return marcacoes.every(val => val === null); // Bloqueia se todos os horários estiverem vazios
+        const marcacoes = Object.values(item.statuses); 
+        return marcacoes.every(val => val === null); 
       });
 
       if (faltamStatus.length > 0) {
         return alert(`⚠️ AÇÃO BLOQUEADA: Você esqueceu de marcar o status (Sim ou Não) em ${faltamStatus.length} produto(s) do TOP 10! Você precisa marcar pelo menos um horário antes de finalizar.`);
       }
 
-      // --- TRAVA DE MODO TESTE ---
       if (isTeste) {
         return alert("✅ ACOMPANHAMENTO DO TOP 10 SALVO COM SUCESSO NO AMBIENTE DE TESTE (NÃO ENVIADO AO SUPABASE)!");
       }
-      // ---------------------------
       
       setLoading(true);
       try {
@@ -934,7 +927,6 @@ if (t.subItems) {
        return alert("📸 Você não bateu sua foto hoje.\n\nPara validar esse check-list, precisamos que você poste uma foto que demonstre que a atividade foi efetuada com sucesso. (Foto em tempo real).\n\nObs: Caso seja uma tarefa de precificação é obrigatório a foto.");
     }
 
-    // --- TRAVA DE MODO TESTE ---
     if (isTeste) {
       const today = new Date().toLocaleDateString();
       localStorage.setItem(`last_submit_date_${department}`, today);
@@ -943,7 +935,6 @@ if (t.subItems) {
       setTasks(resetTasks);
       return alert("SINCRONIZADO COM SUCESSO (AMBIENTE DE TESTE)! BLOQUEADO ATÉ AMANHÃ. (NÃO ENVIADO AO SUPABASE)");
     }
-    // ---------------------------
 
     if (!navigator.onLine) {
       const isConfirmed = window.confirm("📵 Você está sem internet! Deseja salvar a auditoria na Fila Offline para sincronizar depois?");
