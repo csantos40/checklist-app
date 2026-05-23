@@ -212,7 +212,7 @@ const TASK_DATA: any = {
       subItems: ['GELADEIRAS FRENTE DE CAIXA', 'GELADEIRAS LINHA COCA-COLA', 'GELADEIRAS REFRIGERANTES/CERVEJAS'] 
     },
     { description: 'V.O. MANHÃ: Cartazeamento dentro e fora da loja (Validade, descrição, local correto)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Depósito organized e limpo', periodicity: 'DIÁRIO' },
+    { description: 'V.O. MANHÃ: Depósito organizado e limpo', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Equipamentos em funcionamento (refrigeradores, freezers, iluminação...)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Hortifruti (Qualidade, precificação, abastecimento, cartazeamento)', periodicity: 'DIÁRIO' },
     { description: 'V.O. MANHÃ: Limpeza e organização dos banheiros e frente de caixa', periodicity: 'DIÁRIO' },
@@ -783,17 +783,19 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (task.subStatuses && Object.values(task.subStatuses).includes('Aguardando')) return alert("AVALIE TODOS OS BALCÕES ANTES DE FINALIZAR ESTA TAREFA!");
     if (task.status === 'Aguardando') return alert("SELECIONE O STATUS ANTES!");
     
-    const isPrecificacao = task.description.toLowerCase().includes('precifica') || task.description.toLowerCase().includes('preço') || task.description.toLowerCase().includes('cartaz');
-    const ehPadaria = department === 'Padaria-Confeitaria-Rotisseria';
-    
-    if ((isPrecificacao || (ehPadaria && task.status === 'Conforme')) && (!task.photos || task.photos.length === 0)) {
-        return alert("📸 Foto obrigatória para finalizar esta tarefa.");
-    }
-
+    // REGRA 1: NÃO CONFORME (Todos os setores)
     if (task.status === 'Não Conforme') {
         if (!task.photos || task.photos.length === 0) return alert("NÃO CONFORME EXIGE PELO MENOS UMA FOTO!");
         if (!task.observation || task.observation.trim().length < 15) return alert("A RÉPLICA PARA O RH ESTÁ MUITO CURTA! Detalhe melhor o problema (Mínimo 15 caracteres).");
     }
+
+    // REGRA 2: CONFORME (Apenas setor de Padaria)
+    if (task.status === 'Conforme') {
+        if (department === 'Padaria-Confeitaria-Rotisseria') {
+            if (!task.photos || task.photos.length === 0) return alert("📸 A Padaria exige anexar foto obrigatória em todas as tarefas, inclusive nas Conformes!");
+        }
+    }
+
     const newTasks = [...tasks];
     newTasks[realIdx].frozen = true;
     saveState(newTasks);
@@ -924,7 +926,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     
     const temAlgumaFoto = currentPeriodTasks.some(t => t.photos && t.photos.length > 0);
     if (!temAlgumaFoto && currentPeriodicity !== 'TOP 10') {
-       return alert("📸 Você não bateu sua foto hoje.\n\nPara validar esse check-list, precisamos que você poste uma foto que demonstre que a atividade foi efetuada com sucesso. (Foto em tempo real).\n\nObs: Caso seja uma tarefa de precificação é obrigatório a foto.");
+       return alert("📸 Você não bateu nenhuma foto hoje.\n\nPara validar esse check-list, precisamos que você poste pelo menos uma foto que demonstre que a atividade foi efetuada com sucesso no seu setor.");
     }
 
     if (isTeste) {
