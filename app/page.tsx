@@ -921,19 +921,15 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       return;
     }
 
-    // 🚀 LÓGICA DE SALVAMENTO PARA OS OUTROS SETORES
+    // 🚀 LÓGICA ORIGINAL DE SALVAMENTO PARA OS OUTROS SETORES
     const currentPeriodTasks = tasks.filter(t => t.periodicity === currentPeriodicity);
     const unfrozenTasks = currentPeriodTasks.filter(t => !t.frozen);
     if (unfrozenTasks.length > 0) return alert(`FALTAM ${unfrozenTasks.length} TAREFAS PARA FINALIZAR NESTA AUDITORIA!`);
     
-    // --- CORREÇÃO AQUI: FOTO OBRIGATÓRIA GERAL APENAS PARA A PADARIA ---
-    const ehPadaria = department === 'Padaria-Confeitaria-Rotisseria';
     const temAlgumaFoto = currentPeriodTasks.some(t => t.photos && t.photos.length > 0);
-
-    if (ehPadaria && !temAlgumaFoto && currentPeriodicity !== 'TOP 10') {
-       return alert("📸 A Padaria exige pelo menos uma foto para finalizar a auditoria.");
+    if (!temAlgumaFoto && currentPeriodicity !== 'TOP 10') {
+       return alert("📸 Você não bateu nenhuma foto hoje.\n\nPara validar esse check-list, precisamos que você poste pelo menos uma foto que demonstre que a atividade foi efetuada com sucesso no seu setor.");
     }
-    // --------------------------------------------------------
 
     if (isTeste) {
       const today = new Date().toLocaleDateString();
@@ -1316,13 +1312,16 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                     )}
                     {task.status !== 'Aguardando' && currentPeriodicity !== 'PENDÊNCIAS' && (
                       <div className="space-y-4 pt-4 border-t border-slate-200 font-black italic">
-                        {task.status === 'Não Conforme' && (
+                        
+                        {(task.status === 'Não Conforme' || (task.status === 'Conforme' && department === 'Padaria-Confeitaria-Rotisseria')) && (
                           <>
-                            <div className="bg-amber-100 p-5 rounded-[2rem] border-2 border-amber-300 w-full mb-2">
-                              <p className="text-[10px] text-amber-800 font-black uppercase italic mb-2">🗣️ JUSTIFICATIVA / RÉPLICA PARA O RH:</p>
-                              <textarea disabled={task.frozen} placeholder="Explique detalhadamente o motivo para o RH..." className="w-full p-4 rounded-2xl border border-amber-300 text-black font-bold outline-none text-sm uppercase italic shadow-inner bg-white min-h-[80px]" value={task.observation} onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} />
-                              {!task.frozen && <p className={`text-[8px] text-right mt-2 uppercase font-black ${task.observation?.length >= 15 ? 'text-green-600' : 'text-red-500'}`}>{task.observation?.length || 0}/15 CARACTERES EXIGIDOS</p>}
-                            </div>
+                            {task.status === 'Não Conforme' && (
+                              <div className="bg-amber-100 p-5 rounded-[2rem] border-2 border-amber-300 w-full mb-2">
+                                <p className="text-[10px] text-amber-800 font-black uppercase italic mb-2">🗣️ JUSTIFICATIVA / RÉPLICA PARA O RH:</p>
+                                <textarea disabled={task.frozen} placeholder="Explique detalhadamente o motivo para o RH..." className="w-full p-4 rounded-2xl border border-amber-300 text-black font-bold outline-none text-sm uppercase italic shadow-inner bg-white min-h-[80px]" value={task.observation} onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} />
+                                {!task.frozen && <p className={`text-[8px] text-right mt-2 uppercase font-black ${task.observation?.length >= 15 ? 'text-green-600' : 'text-red-500'}`}>{task.observation?.length || 0}/15 CARACTERES EXIGIDOS</p>}
+                              </div>
+                            )}
                             <div className="flex flex-wrap gap-3 items-center font-black italic">
                               {task.photos?.map((p: string, pIdx: number) => (
                                   <div key={pIdx} className="w-16 h-16 rounded-xl border-2 border-amber-300 overflow-hidden shadow-sm relative font-black italic">
@@ -1354,6 +1353,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                             </div>
                           </>
                         )}
+
                         {!task.frozen && <button onClick={() => freezeTask(idx)} className="w-full bg-indigo-500 text-white py-4 rounded-2xl text-[10px] font-black uppercase italic shadow-lg active:scale-95 border-b-4 border-indigo-700 text-white font-black italic">✓ FINALIZAR ESTA TAREFA</button>}
                       </div>
                     )}
