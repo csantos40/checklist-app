@@ -302,7 +302,7 @@ const TASK_DATA: any = {
     { description: 'DIA: Lista dos itens que acabou de chegar (Verificar se já está na área de venda)', periodicity: 'DIÁRIO' },
     { description: 'PRECIFICAÇÃO: Todos os cartazes estão legíveis?', periodicity: 'DIÁRIO' },
     { description: 'PRECIFICAÇÃO: Na área de venda possui rupturas? ', periodicity: 'DIÁRIO' },
-    { description: 'REPOSIÇÃO: Corredores e prateleiras limpos e organizados (paredão visual)', periodicity: 'DIÁRIO' },
+    { description: 'REPOSIÇÃO: Corredores and prateleiras limpos e organizados (paredão visual)', periodicity: 'DIÁRIO' },
     { description: 'VALIDADE: Pegar a lista dos produtos próximo e vencimento e suas quantidades, para traçar plano de ação sendo exposição e preço agressivo, buscando venda rápida', periodicity: 'DIÁRIO' },
     { description: 'GESTÃO: Distribuir tarefas entre repositores (foco em ofertas e tabloide)', periodicity: 'DIÁRIO' },
     { description: 'GESTÃO: Corredores desobstruídos, passagem livre para clientes. Gondolas abastecidas, pontos extras abastecidos. Precificação. Cartaz.', periodicity: 'DIÁRIO' },
@@ -458,9 +458,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       return alert("ESTE ITEM JÁ ESTÁ NA LISTA!");
     }
     
+    // --- ATUALIZADO: DEFINIÇÃO DE HORÁRIOS APENAS PARA 10h e 15h ---
     const newItem = {
       ...item,
-      statuses: { '08:00': null, '12:00': null, '15:00': null, '18:00': null },
+      statuses: { '10:00': null, '15:00': null },
       photo: null
     };
     currentList.push(newItem);
@@ -470,7 +471,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   const handleRemoveTop10 = (category: string, id: string) => {
     if (category === 'Padaria') saveTop10Local(category, top10Padaria.filter(i => i.id !== id));
     if (category === 'Rotisseria') saveTop10Local(category, top10Rotisseria.filter(i => i.id !== id));
-    if (category === 'Confeitaria') saveTop10Local(category, top10Confeitaria.filter(i => i.id !== id));
+    if (category === 'Confeitaria', top10Confeitaria.filter(i => i.id !== id));
   };
 
   const getFilteredProducts = () => {
@@ -784,19 +785,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (task.subStatuses && Object.values(task.subStatuses).includes('Aguardando')) return alert("AVALIE TODOS OS BALCÕES ANTES DE FINALIZAR ESTA TAREFA!");
     if (task.status === 'Aguardando') return alert("SELECIONE O STATUS ANTES!");
 
-    // --- REGRA DE FOTOS LIMPA E DEFINITIVA ---
-
-    // REGRA 1: NÃO CONFORME (Todos os setores)
     if (task.status === 'Não Conforme') {
         if (!task.photos || task.photos.length === 0) return alert("NÃO CONFORME EXIGE PELO MENOS UMA FOTO!");
         if (!task.observation || task.observation.trim().length < 15) return alert("A RÉPLICA PARA O RH ESTÁ MUITO CURTA! Detalhe melhor o problema (Mínimo 15 caracteres).");
     } 
-    // REGRA 2: CONFORME (Apenas Padaria)
-    else if (task.status === 'Conforme') {
-        if (department === 'Padaria-Confeitaria-Rotisseria') {
-            if (!task.photos || task.photos.length === 0) return alert("📸 A Padaria exige anexar foto obrigatória em todas as tarefas, inclusive nas Conformes!");
-        }
-    }
 
     const newTasks = [...tasks];
     newTasks[realIdx].frozen = true;
@@ -809,7 +801,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (isTeste) {
       await removeFromIndexedDB(`offline_sync_${department}`);
       setOfflineCount(0);
-      return alert("🚀 TUDO SINCRONIZADO COM SUCESSO (AMBIENTE DE TESTE - DADOS NÃO FORAM PARA O SUPABASE)!");
+      return alert("🚀 TUDO SINCRONIZADO COM SUCESSO (AMBIENTE DE TESTE)!");
     }
 
     if (!supabase) return;
@@ -854,7 +846,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (foraDoHorario) return alert("FORA DO HORÁRIO PERMITIDO PARA O SEU SETOR!");
     if (isLockedToday) return;
 
-    // 🚀 SALVAMENTO EXCLUSIVO DO TOP 10 (COM SUPABASE)
     if (currentPeriodicity === 'TOP 10') {
       const todosTop10 = [...top10Padaria, ...top10Rotisseria, ...top10Confeitaria];
       if (todosTop10.length === 0) return alert("Adicione produtos ao TOP 10 antes de salvar!");
@@ -875,7 +866,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       }
 
       if (isTeste) {
-        return alert("✅ ACOMPANHAMENTO DO TOP 10 SALVO COM SUCESSO NO AMBIENTE DE TESTE (NÃO ENVIADO AO SUPABASE)!");
+        return alert("✅ ACOMPANHAMENTO DO TOP 10 SALVO COM SUCESSO NO AMBIENTE DE TESTE!");
       }
       
       setLoading(true);
@@ -887,49 +878,31 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
               const res = await fetch(t.photo);
               const blob = await res.blob();
               const fileName = `TOP10_${department.replace(/\s/g, '')}_${t.id}_${Date.now()}.jpg`;
-              
               const { data, error } = await supabase.storage.from('checklist-fotos').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
-              
               if (data && !error) {
                 const { data: pub } = supabase.storage.from('checklist-fotos').getPublicUrl(fileName);
                 if (pub?.publicUrl) fotoUrlFinal = pub.publicUrl;
               }
             } catch (err) { console.error("Falha ao subir foto do TOP 10", err); }
           }
-
-          const statusText = t.statuses 
-            ? Object.entries(t.statuses).map(([time, val]) => `${time} (${val || 'Sem Registo'})`).join(' | ') 
-            : '';
-          return {
-            setor: department,
-            tarefa: `TOP 10: ${t.name}`,
-            status: 'Conforme',
-            observacao: `Acompanhamento: ${statusText}`,
-            foto_url: fotoUrlFinal,
-            created_at: new Date().toISOString()
-          };
+          const statusText = t.statuses ? Object.entries(t.statuses).map(([time, val]) => `${time} (${val || 'Sem Registo'})`).join(' | ') : '';
+          return { setor: department, tarefa: `TOP 10: ${t.name}`, status: 'Conforme', observacao: `Acompanhamento: ${statusText}`, foto_url: fotoUrlFinal, created_at: new Date().toISOString() };
         }));
 
         const { error } = await supabase.from('respostas').insert(payloads);
         if (error) throw error;
         alert("✅ ACOMPANHAMENTO DO TOP 10 SALVO COM SUCESSO NO SERVIDOR!");
       } catch (error) {
-        alert("❌ ERRO AO SALVAR TOP 10 NO SERVIDOR. Verifique a conexão.");
+        alert("❌ ERRO AO SALVAR TOP 10 NO SERVIDOR.");
       } finally {
         setLoading(false);
       }
       return;
     }
 
-    // 🚀 LÓGICA ORIGINAL DE SALVAMENTO PARA OS OUTROS SETORES
     const currentPeriodTasks = tasks.filter(t => t.periodicity === currentPeriodicity);
     const unfrozenTasks = currentPeriodTasks.filter(t => !t.frozen);
     if (unfrozenTasks.length > 0) return alert(`FALTAM ${unfrozenTasks.length} TAREFAS PARA FINALIZAR NESTA AUDITORIA!`);
-    
-    const temAlgumaFoto = currentPeriodTasks.some(t => t.photos && t.photos.length > 0);
-    if (!temAlgumaFoto && currentPeriodicity !== 'TOP 10') {
-       return alert("📸 Você não bateu nenhuma foto hoje.\n\nPara validar esse check-list, precisamos que você poste pelo menos uma foto que demonstre que a atividade foi efetuada com sucesso no seu setor.");
-    }
 
     if (isTeste) {
       const today = new Date().toLocaleDateString();
@@ -937,7 +910,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       setIsLockedToday(true);
       const resetTasks = tasks.map(t => t.periodicity === currentPeriodicity ? { ...t, status: 'Aguardando', observation: '', photos: [], frozen: false, subStatuses: t.subItems ? t.subItems.reduce((acc:any, i:string)=>({...acc, [i]: 'Aguardando'}), {}) : null } : t);
       setTasks(resetTasks);
-      return alert("SINCRONIZADO COM SUCESSO (AMBIENTE DE TESTE)! BLOQUEADO ATÉ AMANHÃ. (NÃO ENVIADO AO SUPABASE)");
+      return alert("SINCRONIZADO COM SUCESSO (AMBIENTE DE TESTE)! BLOQUEADO ATÉ AMANHÃ.");
     }
 
     if (!navigator.onLine) {
@@ -955,7 +928,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
          const resetTasks = tasks.map(t => t.periodicity === currentPeriodicity ? { ...t, status: 'Aguardando', observation: '', photos: [], frozen: false, subStatuses: t.subItems ? t.subItems.reduce((acc:any, i:string)=>({...acc, [i]: 'Aguardando'}), {}) : null } : t);
          setTasks(resetTasks);
          await removeFromIndexedDB(`chk_vVivian_v9_${department}`);
-         alert("💾 SALVO NO MODO OFFLINE! Lembre-se de clicar em Sincronizar quando tiver internet.");
+         alert("💾 SALVO NO MODO OFFLINE!");
       } catch (e) { alert("ERRO AO SALVAR OFFLINE."); } finally { setLoading(false); }
       return;
     }
@@ -987,7 +960,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         return { setor: department, tarefa: t.description, status: t.status, observacao: finalObservation, foto_url: fotoUrlFinal, created_at: t.created_at };
       }));
 
-      // @ts-ignore
       await supabase.from('respostas').insert(payloads);
       const today = new Date().toLocaleDateString();
       localStorage.setItem(`last_submit_date_${department}`, today);
@@ -996,21 +968,16 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       const resetTasks = tasks.map(t => t.periodicity === currentPeriodicity ? { ...t, status: 'Aguardando', observation: '', photos: [], frozen: false, subStatuses: t.subItems ? t.subItems.reduce((acc:any, i:string)=>({...acc, [i]: 'Aguardando'}), {}) : null } : t);
       setTasks(resetTasks);
       await removeFromIndexedDB(`chk_vVivian_v9_${department}`);
-    } catch (err) { alert("ERRO DE CONEXÃO! Verifique sua internet ou tente salvar no modo Offline.");
-    } finally { setLoading(false); }
+    } catch (err) { alert("ERRO DE CONEXÃO!"); } finally { setLoading(false); }
   };
 
   const filteredTasks = tasks.filter(t => currentPeriodicity === 'PENDÊNCIAS' ? t.status === 'Não Conforme' : t.periodicity === currentPeriodicity);
   const totalNCPendentes = tasks.filter(t => t.status === 'Não Conforme').length;
 
-  // 🚀 LÓGICA DE LOGIN COM A SENHA MESTRE 'pcr123'
   const handleLogin = () => {
     // @ts-ignore
     const senhaCorreta = senhasBanco[department];
-    if (
-      (senhaCorreta && senhaCorreta === password) || 
-      (department === 'Padaria-Confeitaria-Rotisseria' && password === 'pcr123')
-    ) {
+    if ((senhaCorreta && senhaCorreta === password) || (department === 'Padaria-Confeitaria-Rotisseria' && password === 'pcr123')) {
       localStorage.setItem('user_auth', department.toLowerCase());
       setIsAuthenticated(true);
       window.location.reload(); 
@@ -1038,9 +1005,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
               </button>
               <input type="password" placeholder="SENHA: teste123" className="w-full p-6 bg-slate-50 border-2 border-amber-500 rounded-2xl text-center text-2xl outline-none font-black text-slate-900 shadow-inner uppercase italic" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
               <button onClick={handleLogin} className="w-full bg-black text-white font-black py-6 rounded-2xl shadow-xl active:scale-95 text-xl italic uppercase font-black italic">ENTRAR NO TESTE</button>
-              <button onClick={resetarAppDeTeste} className="w-full bg-red-600 text-white font-black py-4 rounded-2xl shadow-xl active:scale-95 text-sm italic uppercase mt-4">
-                🧹 ZERAR DADOS DO APP
-              </button>
+              <button onClick={resetarAppDeTeste} className="w-full bg-red-600 text-white font-black py-4 rounded-2xl shadow-xl active:scale-95 text-sm italic uppercase mt-4">🧹 ZERAR DADOS DO APP</button>
             </div>
           </div>
         </div>
@@ -1158,7 +1123,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                          </div>
                        )}
                        <div className="flex justify-between bg-slate-50 p-2 rounded-lg border border-slate-100 mt-1">
-                         {['08:00', '12:00', '15:00', '18:00'].map(time => (
+                         {['10:00', '15:00'].map(time => (
                            <div key={time} className="flex flex-col items-center">
                              <span className="text-[8px] font-black text-slate-500 mb-1">{time}</span>
                              <div className="flex gap-1">
@@ -1203,7 +1168,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                          </div>
                        )}
                        <div className="flex justify-between bg-slate-50 p-2 rounded-lg border border-slate-100 mt-1">
-                         {['08:00', '12:00', '15:00', '18:00'].map(time => (
+                         {['10:00', '15:00'].map(time => (
                            <div key={time} className="flex flex-col items-center">
                              <span className="text-[8px] font-black text-slate-500 mb-1">{time}</span>
                              <div className="flex gap-1">
@@ -1248,7 +1213,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                          </div>
                        )}
                        <div className="flex justify-between bg-slate-50 p-2 rounded-lg border border-slate-100 mt-1">
-                         {['08:00', '12:00', '15:00', '18:00'].map(time => (
+                         {['10:00', '15:00'].map(time => (
                            <div key={time} className="flex flex-col items-center">
                              <span className="text-[8px] font-black text-slate-500 mb-1">{time}</span>
                              <div className="flex gap-1">
@@ -1312,16 +1277,13 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                     )}
                     {task.status !== 'Aguardando' && currentPeriodicity !== 'PENDÊNCIAS' && (
                       <div className="space-y-4 pt-4 border-t border-slate-200 font-black italic">
-                        
-                        {(task.status === 'Não Conforme' || (task.status === 'Conforme' && department === 'Padaria-Confeitaria-Rotisseria')) && (
+                        {task.status === 'Não Conforme' && (
                           <>
-                            {task.status === 'Não Conforme' && (
-                              <div className="bg-amber-100 p-5 rounded-[2rem] border-2 border-amber-300 w-full mb-2">
-                                <p className="text-[10px] text-amber-800 font-black uppercase italic mb-2">🗣️ JUSTIFICATIVA / RÉPLICA PARA O RH:</p>
-                                <textarea disabled={task.frozen} placeholder="Explique detalhadamente o motivo para o RH..." className="w-full p-4 rounded-2xl border border-amber-300 text-black font-bold outline-none text-sm uppercase italic shadow-inner bg-white min-h-[80px]" value={task.observation} onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} />
-                                {!task.frozen && <p className={`text-[8px] text-right mt-2 uppercase font-black ${task.observation?.length >= 15 ? 'text-green-600' : 'text-red-500'}`}>{task.observation?.length || 0}/15 CARACTERES EXIGIDOS</p>}
-                              </div>
-                            )}
+                            <div className="bg-amber-100 p-5 rounded-[2rem] border-2 border-amber-300 w-full mb-2">
+                              <p className="text-[10px] text-amber-800 font-black uppercase italic mb-2">🗣️ JUSTIFICATIVA / RÉPLICA PARA O RH:</p>
+                              <textarea disabled={task.frozen} placeholder="Explique detalhadamente o motivo para o RH..." className="w-full p-4 rounded-2xl border border-amber-300 text-black font-bold outline-none text-sm uppercase italic shadow-inner bg-white min-h-[80px]" value={task.observation} onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} />
+                              {!task.frozen && <p className={`text-[8px] text-right mt-2 uppercase font-black ${task.observation?.length >= 15 ? 'text-green-600' : 'text-red-500'}`}>{task.observation?.length || 0}/15 CARACTERES EXIGIDOS</p>}
+                            </div>
                             <div className="flex flex-wrap gap-3 items-center font-black italic">
                               {task.photos?.map((p: string, pIdx: number) => (
                                   <div key={pIdx} className="w-16 h-16 rounded-xl border-2 border-amber-300 overflow-hidden shadow-sm relative font-black italic">
@@ -1353,7 +1315,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                             </div>
                           </>
                         )}
-
                         {!task.frozen && <button onClick={() => freezeTask(idx)} className="w-full bg-indigo-500 text-white py-4 rounded-2xl text-[10px] font-black uppercase italic shadow-lg active:scale-95 border-b-4 border-indigo-700 text-white font-black italic">✓ FINALIZAR ESTA TAREFA</button>}
                       </div>
                     )}
@@ -1429,9 +1390,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         {/* 🚀 BOTÃO DE FINALIZAR */}
         {!isLockedToday && !foraDoHorario && currentPeriodicity !== 'PENDÊNCIAS' && (
           <footer className="p-8 bg-slate-50 text-center border-t border-slate-200 rounded-b-[3.5rem] font-black italic">
-            <button onClick={submitChecklist} disabled={loading} className={`w-full py-7 rounded-[2.5rem] shadow-xl text-xl transition-all active:scale-95 font-black italic uppercase border-b-8 font-black italic ${loading ? 'bg-slate-400 border-slate-500 font-black italic' : 'bg-black text-white border-slate-800 hover:bg-slate-900 font-black italic'} text-white font-black italic`}>
-              {loading ? 'SINCRONIZANDO...' : currentPeriodicity === 'TOP 10' ? 'SALVAR ACOMPANHAMENTO TOP 10' : `FINALIZAR AUDITORIA`}
-            </button>
+            <button onClick={submitChecklist} disabled={loading} className={`w-full py-7 rounded-[2.5rem] shadow-xl text-xl transition-all active:scale-95 font-black italic uppercase border-b-8 font-black italic ${loading ? 'bg-slate-400 border-slate-500 font-black italic' : 'bg-black text-white border-slate-800 hover:bg-slate-900 font-black italic'}`}>{loading ? 'SINCRONIZANDO...' : currentPeriodicity === 'TOP 10' ? 'SALVAR ACOMPANHAMENTO TOP 10' : `FINALIZAR AUDITORIA`}</button>
           </footer>
         )}
       </div>
