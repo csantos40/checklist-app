@@ -58,16 +58,16 @@ const SETORES_LISTA = ["Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios 
 
 // --- 🍞 LISTAS FIXAS ATUALIZADAS DO TOP 10 ---
 const PRODUTOS_PADARIA = [
-  { id: '0000000005519', name: 'Pd Pao Frances Kg' },
-  { id: '0000000006453', name: 'Pd Pao De Queijo Tradicional Kg' },
+  { id: '0000000003384', name: 'Pd Pao Frances Kg' },
+  { id: '0000000033350', name: 'Pd Pao Caseirinho Kg' },
+  { id: '0000000007252', name: 'Pd Pao Caseiro Da Vovo Kg' },
+  { id: '0000000020268', name: 'Pd Pao De Queijo Kg' },
+  { id: '0000000002912', name: 'Pd Cueca Virada Kg' },
+  { id: '0000000008914', name: 'Pd Pao De Forma Kg' },
+  { id: '0000000001328', name: 'Pd Biscoito Mineiro Kg' },
   { id: '0000000021005', name: 'Pd Donuts Sabores Un' },
   { id: '0000000007313', name: 'Pd Pao De Leite Kg' },
-  { id: '0000000008391', name: 'Pd Pao Baguete Kg' },
-  { id: '0000000001995', name: 'Pd Panettone Da Casa 500g' },
-  { id: '0000000004076', name: 'Pd Pao De Forma Kg' },
-  { id: '0000000002015', name: 'Pd Pao Bisnaguinha Kg' },
-  { id: '0000000008697', name: 'Pd Pao Brioche Kg' },
-  { id: '0000000004549', name: 'Pd Pao Amanhecido Kg' }
+  { id: '0000000006453', name: 'Pd Pao De Queijo Tradicional Kg' }
 ];
 
 const PRODUTOS_ROTISSERIA = [
@@ -79,8 +79,8 @@ const PRODUTOS_ROTISSERIA = [
   { id: '0000000046077', name: 'Rt Empada Vivian Un' },
   { id: '0000000007788', name: 'Rt Pizza Pronta Assada Kg' },
   { id: '0000000008976', name: 'Mini Pastel Vento Kg' },
-  { id: '0000000003661', name: 'Rt Pao Com Linguiça Kg' },
-  { id: '0000000003610', name: 'Rt Coxinha Costela Un' }
+  { id: '0000000096478', name: 'Rt Lanche Hamburguer Da Casa Kg' },
+  { id: '0000000001281', name: 'Rt Pizza Da Casa 600g' }
 ];
 
 const PRODUTOS_CONFEITARIA = [
@@ -88,12 +88,12 @@ const PRODUTOS_CONFEITARIA = [
   { id: '0000000058582', name: 'Churros Un' },
   { id: '0000000031875', name: 'Cf Torta Brigadeiro Kg' },
   { id: '0000000005739', name: 'Cf Bolo Sc Chocolate Kg' },
-  { id: '0000000038841', name: 'Cf Torteleta Morango Kg' },
-  { id: '0000000005798', name: 'Cf Bolo Sc Limao Kg' },
-  { id: '0000000005763', name: 'Cf Bolo Sc Formigueiro Kg' },
-  { id: '0000000005801', name: 'Cf Bolo Sc Milho Kg' },
-  { id: '0000000008526', name: 'Cf Bolo Gelado Kg' },
-  { id: '0000000032588', name: 'Cf Rocambole Doce Leite Kg' }
+  { id: '0000000065429', name: 'Cf Bolo Doce Leite Chocolate Kg' },
+  { id: '0000000006873', name: 'Cf Carolina Kg' },
+  { id: '0000000007054', name: 'Cf Torta Suflair Kg' },
+  { id: '0000000085694', name: 'Cf Torta Mineira Kg' },
+  { id: '0000000007245', name: 'Cf Brigadeirinho Kg' },
+  { id: '0000000054218', name: 'Cf Bolo De Cenoura Kg' }
 ];
 
 // 2. TAREFAS
@@ -382,6 +382,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (category === 'Confeitaria') saveTop10Local(category, top10Confeitaria.filter(i => i.id !== id));
   };
 
+  // 🚀 BUSCA INTELIGENTE: Ignora zeros à esquerda e pesquisa por Nome ou Código
   const getFilteredProducts = () => {
     let list: any[] = [];
     if (activeTop10Category === 'Padaria') list = PRODUTOS_PADARIA;
@@ -389,7 +390,17 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (activeTop10Category === 'Confeitaria') list = PRODUTOS_CONFEITARIA;
     
     if (!searchTerm) return list;
-    return list.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const searchLower = searchTerm.toLowerCase().trim();
+    const searchNoZeros = searchLower.replace(/^0+/, ''); 
+
+    return list.filter(item => {
+      const nameMatch = item.name.toLowerCase().includes(searchLower);
+      const idMatchOriginal = item.id.includes(searchLower);
+      const idMatchNoZeros = searchNoZeros.length > 0 && item.id.replace(/^0+/, '').includes(searchNoZeros);
+      
+      return nameMatch || idMatchOriginal || idMatchNoZeros;
+    });
   };
 
   const resetarAppDeTeste = () => {
@@ -1326,7 +1337,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
               <div className="p-6 bg-slate-50 border-b border-slate-200">
                 <input 
                   type="text" 
-                  placeholder="DIGITE O NOME DO PRODUTO..." 
+                  placeholder="NOME OU CÓDIGO DO PRODUTO..." 
                   className="w-full p-4 rounded-xl border-2 border-slate-200 uppercase text-xs font-black italic text-slate-900 outline-none focus:border-indigo-500"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
