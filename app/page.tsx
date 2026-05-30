@@ -247,15 +247,15 @@ const TASK_DATA: any = {
   ]
 };
 
-// 🚀 INJEÇÃO AUTOMÁTICA DE TODAS AS TAREFAS NO AMBIENTE DE TESTE
+// 🚀 INJEÇÃO AUTOMÁTICA E MAPEAMENTO DE SETOR PARA O AMBIENTE DE TESTE
 TASK_DATA['TESTE_SISTEMA'] = [
-  ...TASK_DATA['TESTE_SISTEMA'],
-  ...TASK_DATA['Gerente'],
-  ...TASK_DATA['SubGerente'],
-  ...TASK_DATA['FLV'],
-  ...TASK_DATA['Mercearia'],
-  ...TASK_DATA['FLC (Frios e Laticínios)'],
-  ...TASK_DATA['Padaria-Confeitaria-Rotisseria']
+  ...TASK_DATA['TESTE_SISTEMA'].map((t: any) => ({ ...t, testSector: 'GERAL' })),
+  ...TASK_DATA['Gerente'].map((t: any) => ({ ...t, testSector: 'GERENTE' })),
+  ...TASK_DATA['SubGerente'].map((t: any) => ({ ...t, testSector: 'SUBGERENTE' })),
+  ...TASK_DATA['FLV'].map((t: any) => ({ ...t, testSector: 'FLV' })),
+  ...TASK_DATA['Mercearia'].map((t: any) => ({ ...t, testSector: 'MERCEARIA' })),
+  ...TASK_DATA['FLC (Frios e Laticínios)'].map((t: any) => ({ ...t, testSector: 'FLC' })),
+  ...TASK_DATA['Padaria-Confeitaria-Rotisseria'].map((t: any) => ({ ...t, testSector: 'PADARIA' }))
 ];
 
 export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean }) {
@@ -271,11 +271,14 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [supabase, setSupabase] = useState<any>(null);
-  const [senhasBanco, setSenhasBanco] = useState({});
+  const [senhasBanco, setSenhasBanco] = useState<any>({});
   const [suppressHydration, setSuppressHydration] = useState(false);
   const [isLockedToday, setIsLockedToday] = useState(false);
   const [resolvingTask, setResolvingTask] = useState<any>(null);
   const [tratativaTexto, setTratativaTexto] = useState('');
+  
+  // 🚀 ESTADO DA ABA ATIVA NO MODO DE TESTE
+  const [activeTestSector, setActiveTestSector] = useState('GERAL');
   
   const [offlineCount, setOfflineCount] = useState(0);
 
@@ -382,7 +385,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (category === 'Confeitaria') saveTop10Local(category, top10Confeitaria.filter(i => i.id !== id));
   };
 
-  // 🚀 BUSCA INTELIGENTE: Ignora zeros à esquerda e pesquisa por Nome ou Código
   const getFilteredProducts = () => {
     let list: any[] = [];
     if (activeTop10Category === 'Padaria') list = PRODUTOS_PADARIA;
@@ -648,9 +650,13 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     const statuses = Object.values(newTasks[realIdx].subStatuses);
     if (statuses.includes('Não Conforme')) { newTasks[realIdx].status = 'Não Conforme';
     } else if (statuses.includes('Aguardando')) { newTasks[realIdx].status = 'Aguardando'; } else { newTasks[realIdx].status = 'Conforme'; }
+    
+    const isPadaria = department === 'Padaria-Confeitaria-Rotisseria';
     newTasks.forEach((task, tIdx) => {
       if (tIdx !== realIdx && !task.frozen && task.status !== 'Aguardando') {
-        const canAutoFreeze = task.status === 'Conforme' || (task.status === 'Não Conforme' && task.observation?.trim().length >= 15 && task.photos?.length > 0);
+        const canAutoFreeze = 
+           (task.status === 'Conforme' && (!isPadaria || (task.photos && task.photos.length > 0))) || 
+           (task.status === 'Não Conforme' && task.observation?.trim().length >= 15 && task.photos && task.photos.length > 0);
         if (canAutoFreeze && !task.subStatuses) newTasks[tIdx].frozen = true;
       }
     });
@@ -661,12 +667,17 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     const realIdx = tasks.indexOf(filteredTasks[idx]);
     if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
     const newTasks = [...tasks];
+    
+    const isPadaria = department === 'Padaria-Confeitaria-Rotisseria';
     newTasks.forEach((task, tIdx) => {
       if (tIdx !== realIdx && !task.frozen && task.status !== 'Aguardando') {
-        const canAutoFreeze = task.status === 'Conforme' || (task.status === 'Não Conforme' && task.observation?.trim().length >= 15 && task.photos?.length > 0);
+        const canAutoFreeze = 
+           (task.status === 'Conforme' && (!isPadaria || (task.photos && task.photos.length > 0))) || 
+           (task.status === 'Não Conforme' && task.observation?.trim().length >= 15 && task.photos && task.photos.length > 0);
         if (canAutoFreeze && !task.subStatuses) newTasks[tIdx].frozen = true;
       }
     });
+    
     newTasks[realIdx].status = newTasks[realIdx].status === clickedStatus ? 'Aguardando' : clickedStatus;
     saveState(newTasks);
   };
@@ -707,7 +718,9 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (task.status === 'Não Conforme') {
         if (!task.photos || task.photos.length === 0) return alert("NÃO CONFORME EXIGE PELO MENOS UMA FOTO!");
         if (!task.observation || task.observation.trim().length < 15) return alert("A RÉPLICA PARA O RH ESTÁ MUITO CURTA! Detalhe melhor o problema (Mínimo 15 caracteres).");
-    } 
+    } else if (task.status === 'Conforme' && department === 'Padaria-Confeitaria-Rotisseria') {
+        if (!task.photos || task.photos.length === 0) return alert("A PADARIA EXIGE FOTO TAMBÉM NAS TAREFAS CONFORME!");
+    }
 
     const newTasks = [...tasks];
     newTasks[realIdx].frozen = true;
@@ -890,7 +903,13 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     } catch (err) { alert("ERRO DE CONEXÃO!"); } finally { setLoading(false); }
   };
 
-  const filteredTasks = tasks.filter(t => currentPeriodicity === 'PENDÊNCIAS' ? t.status === 'Não Conforme' : t.periodicity === currentPeriodicity);
+  // 🚀 LÓGICA DE FILTRAGEM DE TAREFAS E ABAS DO MODO TESTE
+  let filteredTasks = tasks.filter(t => currentPeriodicity === 'PENDÊNCIAS' ? t.status === 'Não Conforme' : t.periodicity === currentPeriodicity);
+  
+  if (department === 'TESTE_SISTEMA' && currentPeriodicity !== 'TOP 10' && currentPeriodicity !== 'PENDÊNCIAS') {
+    filteredTasks = filteredTasks.filter(t => t.testSector === activeTestSector || (!t.testSector && activeTestSector === 'GERAL'));
+  }
+
   const totalNCPendentes = tasks.filter(t => t.status === 'Não Conforme').length;
 
   const handleLogin = () => {
@@ -1042,6 +1061,21 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
               <button key={p} onClick={() => setCurrentPeriodicity(p)} className={`flex-1 min-w-[80px] py-3 text-[10px] rounded-xl transition-all font-black italic ${currentPeriodicity === p ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>{p}</button>
             ))}
           </div>
+          
+          {/* 🚀 ABAS EXCLUSIVAS DO MODO DE TESTE */}
+          {department === 'TESTE_SISTEMA' && currentPeriodicity !== 'TOP 10' && (
+            <div className="mt-4 flex gap-2 bg-amber-500/20 p-2 rounded-2xl max-w-full overflow-x-auto no-scrollbar border border-amber-500/30">
+               {['GERAL', 'GERENTE', 'SUBGERENTE', 'FLV', 'MERCEARIA', 'FLC', 'PADARIA'].map(sec => (
+                  <button 
+                    key={sec} 
+                    onClick={() => setActiveTestSector(sec)} 
+                    className={`flex-none px-4 py-2 text-[10px] rounded-xl transition-all font-black uppercase italic ${activeTestSector === sec ? 'bg-amber-500 text-black shadow-md' : 'text-amber-200 hover:bg-amber-500/50 hover:text-white'}`}
+                  >
+                    {sec}
+                  </button>
+               ))}
+            </div>
+          )}
         </header>
 
         {offlineCount > 0 && (
@@ -1063,7 +1097,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
             <div className="space-y-8 animate-in fade-in duration-300">
                <div className="text-center mb-6">
                  <h2 className="text-3xl text-indigo-700 font-black uppercase italic">🏆 TOP 10 VENDAS</h2>
-                 <p className="text-xs text-slate-400 font-bold uppercase italic mt-2">Construa a "Curva A" para monitoramento e produção</p>
+                 <p className="text-xs text-slate-400 font-bold uppercase italic mt-2">Construa a &quot;Curva A&quot; para monitoramento e produção</p>
                </div>
 
                {/* PADARIA */}
@@ -1091,7 +1125,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                        
                        {item.photo && (
                          <div className="w-full flex justify-center bg-slate-50 rounded-lg p-1 border border-slate-100">
-                           <img src={item.photo} alt="Foto" className="h-20 object-contain rounded-md" />
+                           <img src={item.photo} alt="Foto Produto" className="h-20 object-contain rounded-md" />
                          </div>
                        )}
                        <div className="flex justify-between bg-slate-50 p-2 rounded-lg border border-slate-100 mt-1">
@@ -1136,7 +1170,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                        
                        {item.photo && (
                          <div className="w-full flex justify-center bg-slate-50 rounded-lg p-1 border border-slate-100">
-                           <img src={item.photo} alt="Foto" className="h-20 object-contain rounded-md" />
+                           <img src={item.photo} alt="Foto Produto" className="h-20 object-contain rounded-md" />
                          </div>
                        )}
                        <div className="flex justify-between bg-slate-50 p-2 rounded-lg border border-slate-100 mt-1">
@@ -1181,7 +1215,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                        
                        {item.photo && (
                          <div className="w-full flex justify-center bg-slate-50 rounded-lg p-1 border border-slate-100">
-                           <img src={item.photo} alt="Foto" className="h-20 object-contain rounded-md" />
+                           <img src={item.photo} alt="Foto Produto" className="h-20 object-contain rounded-md" />
                          </div>
                        )}
                        <div className="flex justify-between bg-slate-50 p-2 rounded-lg border border-slate-100 mt-1">
@@ -1224,7 +1258,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                       <div className="space-y-4 pt-4 border-t-2 border-amber-200 text-slate-900 font-black italic">
                          <div className="bg-amber-100 p-4 rounded-2xl border-l-4 border-amber-500 text-slate-900 font-black italic">
                             <p className="text-[7px] text-amber-700 font-black uppercase italic font-black italic">RÉPLICA ENVIADA AO RH NO DIA DA AUDITORIA:</p>
-                            <p className="text-xs italic font-bold text-slate-900 font-black italic">"{task.observation}"</p>
+                            <p className="text-xs italic font-bold text-slate-900 font-black italic">&quot;{task.observation}&quot;</p>
                          </div>
                          <button onClick={() => setResolvingTask(task)} className="w-full bg-green-600 text-white py-5 rounded-2xl font-black uppercase italic shadow-xl active:scale-95 text-sm transition-all text-white font-black italic">✓ RESOLVER ESTE PROBLEMA</button>
                       </div>
@@ -1250,17 +1284,20 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                     {task.status !== 'Aguardando' && currentPeriodicity !== 'PENDÊNCIAS' && (
                       <div className="space-y-4 pt-4 border-t border-slate-200 font-black italic">
                         
-                        {task.status === 'Não Conforme' && (
+                        {/* 🚀 CÂMERA E OBSERVAÇÃO MOSTRADOS PARA NC OU PADARIA EM CONFORME */}
+                        {(task.status === 'Não Conforme' || (task.status === 'Conforme' && department === 'Padaria-Confeitaria-Rotisseria')) && (
                           <>
-                            <div className="bg-amber-100 p-5 rounded-[2rem] border-2 border-amber-300 w-full mb-2">
-                              <p className="text-[10px] text-amber-800 font-black uppercase italic mb-2">🗣️ JUSTIFICATIVA / RÉPLICA PARA O RH:</p>
-                              <textarea disabled={task.frozen} placeholder="Explique detalhadamente o motivo para o RH..." className="w-full p-4 rounded-2xl border border-amber-300 text-black font-bold outline-none text-sm uppercase italic shadow-inner bg-white min-h-[80px]" value={task.observation} onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} />
-                              {!task.frozen && <p className={`text-[8px] text-right mt-2 uppercase font-black ${task.observation?.length >= 15 ? 'text-green-600' : 'text-red-500'}`}>{task.observation?.length || 0}/15 CARACTERES EXIGIDOS</p>}
-                            </div>
+                            {task.status === 'Não Conforme' && (
+                              <div className="bg-amber-100 p-5 rounded-[2rem] border-2 border-amber-300 w-full mb-2">
+                                <p className="text-[10px] text-amber-800 font-black uppercase italic mb-2">🗣️ JUSTIFICATIVA / RÉPLICA PARA O RH:</p>
+                                <textarea disabled={task.frozen} placeholder="Explique detalhadamente o motivo para o RH..." className="w-full p-4 rounded-2xl border border-amber-300 text-black font-bold outline-none text-sm uppercase italic shadow-inner bg-white min-h-[80px]" value={task.observation} onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} />
+                                {!task.frozen && <p className={`text-[8px] text-right mt-2 uppercase font-black ${task.observation?.length >= 15 ? 'text-green-600' : 'text-red-500'}`}>{task.observation?.length || 0}/15 CARACTERES EXIGIDOS</p>}
+                              </div>
+                            )}
                             <div className="flex flex-wrap gap-3 items-center font-black italic">
                               {task.photos?.map((p: string, pIdx: number) => (
                                   <div key={pIdx} className="w-16 h-16 rounded-xl border-2 border-amber-300 overflow-hidden shadow-sm relative font-black italic">
-                                      <img src={p} className="w-full h-full object-cover font-black italic" />
+                                      <img src={p} alt="Anexo Auditoria" className="w-full h-full object-cover font-black italic" />
                                       {!task.frozen && <button onClick={() => handleRemovePhoto(idx, pIdx)} className="absolute top-0 right-0 bg-red-600 text-white w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded-bl-lg shadow-md text-white font-black font-black italic">X</button>}
                                   </div>
                               ))}
