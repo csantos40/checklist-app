@@ -56,136 +56,44 @@ const removeFromIndexedDB = async (key: string) => {
 
 const SETORES_LISTA = ["Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios e Laticínios)", "Padaria-Confeitaria-Rotisseria"];
 
-// --- 🍞 BANCO DE DADOS DE PRODUTOS TOP 10 ---
+// --- 🍞 LISTAS FIXAS ATUALIZADAS DO TOP 10 ---
 const PRODUTOS_PADARIA = [
-  { id: '500666', name: 'Biscoito Amanteigado Kg' }, { id: '1428950', name: 'Biscoito Flor De Pistache Kg' }, { id: '960845', name: 'Biscoito Gourmet Kg' },
-  { id: '838810', name: 'Cafe Moido 500g' }, { id: '1435990', name: 'Pd Batata Recheada Kg' }, { id: '411701', name: 'Pd Biscoito Mineiro Kg' },
-  { id: '199770', name: 'Pd Bolacha Agua Sal Kg' }, { id: '863653', name: 'Pd Bolacha Pet Four Kg' }, { id: '1064479', name: 'Pd Broa C/ Chocolate Kg' },
-  { id: '806633', name: 'Pd Broa Milho Kg' }, { id: '469734', name: 'Pd Broinha Caxambu Kg' }, { id: '917966', name: 'Pd Chipa Unid' },
-  { id: '917958', name: 'Pd Chipa Kg' }, { id: '1173650', name: 'Pd Chocottone C/ Cobertura Kg' }, { id: '426270', name: 'Pd Chocottone Da Casa 100g' },
-  { id: '426253', name: 'Pd Chocottone Da Casa 500g' }, { id: '914312', name: 'Pd Chocottone Trufado Kg' }, { id: '1173677', name: 'Pd Chocottone Trufado Kg Dois Amores' },
-  { id: '1173642', name: 'Pd Chocottone Trufado Kg Ferrero Rocher' }, { id: '851779', name: 'Pd Colomba Pascal Kg' }, { id: '239640', name: 'Pd Colomba Pascal Frutas 400g' },
-  { id: '604801', name: 'Pd Colomba Pascal Gotas Choc 400g' }, { id: '1089404', name: 'Pd Croissant Calabresa Kg' }, { id: '1094653', name: 'Pd Cuca Doce Doce Sabores Kg' },
-  { id: '425036', name: 'Pd Cueca Virada Kg' }, { id: '1427628', name: 'Pd Donuts Coraçao Un' }, { id: '924180', name: 'Pd Donuts Sabores Un' },
-  { id: '199460', name: 'Farinha Rosca Kg' }, { id: '514209', name: 'Pd Fatia Hungara Kg' }, { id: '870706', name: 'Pd Lua De Mel Kg' },
-  { id: '199478', name: 'Pd Massa Pizza Kg' }, { id: '1368222', name: 'Pd Mini Baquete 100g' }, { id: '282804', name: 'Pd Panettone Da Casa 100g' },
-  { id: '1440829', name: 'Pd Panettone Da Casa 400g' }, { id: '199524', name: 'Pd Panettone Da Casa 500g' }, { id: '454907', name: 'Pd Pao Amanhecido Kg' },
-  { id: '997455', name: 'Pd Pao Australiano Kg' }, { id: '869066', name: 'Pd Pao Baguete Integral 38% Kg' }, { id: '839140', name: 'Pd Pao Baguete Kg' },
-  { id: '524247', name: 'Pd Pao Baguete Mini Veneza Kg' }, { id: '917486', name: 'Pd Pao Baguete Tradicional Kg' }, { id: '201588', name: 'Pd Pao Bisnaguinha Kg' },
-  { id: '869783', name: 'Pd Pao Brioche Kg' }, { id: '869163', name: 'Pd Pao Brioche Kg' }, { id: '1128140', name: 'Pd Pao Caseirinho Kg' },
-  { id: '199559', name: 'Pd Pao Caseiro Da Vovo Kg' }, { id: '917451', name: 'Pd Pao Centeio Bola Kg' }, { id: '1063820', name: 'Pd Pao De Alho Kg' },
-  { id: '868981', name: 'Pd Pao De Açucar Kg' }, { id: '199710', name: 'Pd Pao De Batata Kg Doce' }, { id: '455539', name: 'Pd Pao De Batata Kg' },
-  { id: '869023', name: 'Pd Pao De Beterraba Kg' }, { id: '868710', name: 'Pd Pao De Cenoura Kg' }, { id: '1176935', name: 'Pd Pao De Coco Kg' },
-  { id: '407631', name: 'Pd Pao De Forma Kg' }, { id: '199672', name: 'Pd Pao De Hamburguer Kg' }, { id: '199680', name: 'Pd Pao De Hot Dog Kg' },
-  { id: '199508', name: 'Pd Pao De Hot Dog Mini Kg' }, { id: '199621', name: 'Pd Pao De Leite Kg' }, { id: '917940', name: 'Pd Pao De Queijo Kg' },
-  { id: '1116037', name: 'Pd Pao De Queijo Palito Kg' }, { id: '1453130', name: 'Pd Pao De Queijo Rech Bacon Kg' }, { id: '1448978', name: 'Pd Pao De Queijo Rech Frango Kg' },
-  { id: '1448951', name: 'Pd Pao De Queijo Rech Goiabada Kg' }, { id: '1448960', name: 'Pd Pao De Queijo Rech Requeijao Kg' }, { id: '214698', name: 'Pd Pao Doce Kg' },
-  { id: '864013', name: 'Pd Pao Doce Trança Caracol Kg' }, { id: '851744', name: 'Pd Pao Frances Mini Kg' }, { id: '917494', name: 'Pd Pao Fuba Bola Kg' },
-  { id: '199699', name: 'Pd Pao Integral Kg' }, { id: '228141', name: 'Pd Pao Italiano Kg' }, { id: '850632', name: 'Pd Pao Kuke Do Padeiro Goiaba Kg' },
-  { id: '850640', name: 'Pd Pao Kuke Do Padeiro Kg' }, { id: '179760', name: 'Pd Pao Melao Kg' }, { id: '839299', name: 'Pd Pao Milho Kg' },
-  { id: '924075', name: 'Pd Pao Mini Baguete Tradicional Kg' }, { id: '869058', name: 'Pd Pao Portugues Kg' }, { id: '917524', name: 'Pd Pao Rosca Doce Kg' },
-  { id: '917630', name: 'Pd Pao Sirio Kg' }, { id: '199745', name: 'Pd Pao Sovado Kg' }, { id: '1406329', name: 'Pd Pao Tipo Australiano Kg' },
-  { id: '565180', name: 'Pd Pao Torresmo Kg' }, { id: '1181211', name: 'Pd Paozinho Curit Choco Kg' }, { id: '1181220', name: 'Pd Paozinho Curitibano Kg' },
-  { id: '917656', name: 'Pd Rosca Natalina Kg' }, { id: '1418220', name: 'Pd Rosquinha De Laranja Kg' }, { id: '248118', name: 'Pd Rosquinha Pinga Kg' },
-  { id: '870650', name: 'Pd Sequilhos Kg' }, { id: '201855', name: 'Pd Torrada Kg' }, { id: '868523', name: 'Pizza Especial Kg' }, { id: '917559', name: 'Rosquinha Da Vovo Kg' }
+  { id: '0000000005519', name: 'Pd Pao Frances Kg' },
+  { id: '0000000006453', name: 'Pd Pao De Queijo Tradicional Kg' },
+  { id: '0000000021005', name: 'Pd Donuts Sabores Un' },
+  { id: '0000000007313', name: 'Pd Pao De Leite Kg' },
+  { id: '0000000008391', name: 'Pd Pao Baguete Kg' },
+  { id: '0000000001995', name: 'Pd Panettone Da Casa 500g' },
+  { id: '0000000004076', name: 'Pd Pao De Forma Kg' },
+  { id: '0000000002015', name: 'Pd Pao Bisnaguinha Kg' },
+  { id: '0000000008697', name: 'Pd Pao Brioche Kg' },
+  { id: '0000000004549', name: 'Pd Pao Amanhecido Kg' }
 ];
 
 const PRODUTOS_ROTISSERIA = [
-  { id: '869287', name: 'Coxinha De Mandioca C/ Carne Moida Un' }, { id: '869279', name: 'Coxinha De Mandioca C/ Frango Un' }, { id: '917974', name: 'Croissant C/ Calabresa Kg' },
-  { id: '917982', name: 'Croissant C/ Pres/Queijo Kg' }, { id: '1096192', name: 'Croissant Frango C/ Requeijao Kg' }, { id: '1000136', name: 'Croquete Un' },
-  { id: '680044', name: 'Esfirra Aberta Kg' }, { id: '1333704', name: 'Fornecimento Lanche Para Evento' }, { id: '1343548', name: 'Kibe C/ Requeijao Lanche Un' },
-  { id: '862673', name: 'Mini Pastel Vento Kg' }, { id: '1150359', name: 'Mini Salgados Assados Unidade' }, { id: '973661', name: 'Pastel De Vento Unidade' },
-  { id: '869309', name: 'Pd Salgado Assado Un' }, { id: '1101650', name: 'Risoles Unidade' }, { id: '1448382', name: 'Rt Arroz Branco Vivian Kg' },
-  { id: '1448374', name: 'Rt Arroz Temperado Vivian Kg' }, { id: '163600', name: 'Rt Barqueta Un' }, { id: '249220', name: 'Rt Barquete Un Chocolate' },
-  { id: '862657', name: 'Rt Bauru Kg' }, { id: '1385801', name: 'Rt Bolinho De Bacalhau Kg' }, { id: '870064', name: 'Rt Bolinho De Carne Kg' },
-  { id: '862460', name: 'Rt Bolinho De Carne Mini Kg' }, { id: '918016', name: 'Rt Calzone Sabores Un' }, { id: '918008', name: 'Rt Coxinha Costela Un' },
-  { id: '869589', name: 'Rt Empada Kg' }, { id: '869422', name: 'Rt Empada Vivian Un' }, { id: '869570', name: 'Rt Empadao De Frango Kg' },
-  { id: '862541', name: 'Rt Empadinha De Frango Kg' }, { id: '1063782', name: 'Rt Enroladinho Pres Qjo Kg' }, { id: '444111', name: 'Rt Enroladinho Presunto Mussarela Un' },
-  { id: '960764', name: 'Rt Enrolado Cabotia Un' }, { id: '590444', name: 'Rt Enrolado Salsicha Kg' }, { id: '1100890', name: 'Rt Escond De Carne Moida Kg' },
-  { id: '869368', name: 'Rt Esfiha De Unidade' }, { id: '710342', name: 'Rt Esfirra Frango Un' }, { id: '402532', name: 'Rt Esfirra Kg' },
-  { id: '501131', name: 'Rt Esfirrra Carne Un' }, { id: '870854', name: 'Rt Espetinho Bovino Kg' }, { id: '590550', name: 'Rt Espetinho Cafta Carne Kg' },
-  { id: '616435', name: 'Rt Espetinho Carne Un' }, { id: '592382', name: 'Rt Espetinho De Frango Frito Un' }, { id: '1129333', name: 'Rt Espetinho Frango Kg' },
-  { id: '1452118', name: 'Rt File Mignon Suino Assado Vivian Kg' }, { id: '402940', name: 'Rt Foccacia Kg' }, { id: '1448048', name: 'Rt Frango Coxa/Sobrec Assado Kg' },
-  { id: '1447432', name: 'Rt Frango Frito Kg' }, { id: '1094548', name: 'Rt Hamburgao Assado Un' }, { id: '1110560', name: 'Rt Hot Dog Kg' },
-  { id: '1441760', name: 'Rt Kibe Recheado Assado Kg' }, { id: '552887', name: 'Rt Lanche Frio Kg' }, { id: '1118161', name: 'Rt Lanche Hamburguer Da Casa Kg' },
-  { id: '1063405', name: 'Rt Lanche Hamburguer Kg' }, { id: '1063413', name: 'Rt Lanche Hot Dog Kg' }, { id: '862851', name: 'Rt Lanche Shawarma Kg' },
-  { id: '1347039', name: 'Rt Lasanha De Carne Da Casa Kg' }, { id: '862614', name: 'Rt Lasanha De Carne Kg' }, { id: '917702', name: 'Rt Lasanha De Frango Da Casa Kg' },
-  { id: '1448102', name: 'Rt Maionese Vivian Kg' }, { id: '869899', name: 'Rt Mini Enroladinho De Calabreza Kg' }, { id: '917990', name: 'Rt Mini Enroladinho De Salsichakg' },
-  { id: '862606', name: 'Rt Mini Enroladinho Frango/Catupiry Kg' }, { id: '862630', name: 'Rt Mini Enroladinho Queijo e Presunto Kg' }, { id: '862649', name: 'Rt Mini Hamburguinho Kg' },
-  { id: '1443186', name: 'Rt Misto Quente Kg' }, { id: '869180', name: 'Rt Panqueca De Carne Kg' }, { id: '869198', name: 'Rt Panqueca De Frango Kg' },
-  { id: '917621', name: 'Rt Pao Com Linguiça Kg' }, { id: '1103580', name: 'Rt Pastel Kg' }, { id: '1343688', name: 'Rt Pastel De Nata Un' },
-  { id: '1431480', name: 'Rt Pastel De Vento Kg' }, { id: '1448609', name: 'Rt Pernil Assado Vivian Kg' }, { id: '842516', name: 'Rt Pizza Da Casa 600g' },
-  { id: '607819', name: 'Rt Pizza Pronta Assada Kg' }, { id: '592455', name: 'Rt Pizza Semi Pronta Kg' }, { id: '1444824', name: 'Rt Quiche Kg' },
-  { id: '869627', name: 'Rt Rondelli Carne Kg' }, { id: '869678', name: 'Rt Rondelli Frango Kg' }, { id: '972452', name: 'Rt Rondelli Presunto Queijo Kg' },
-  { id: '864765', name: 'Rt Salgado Frito Grande Un' }, { id: '869929', name: 'Rt Salgado Frito Mini Un' }, { id: '1448528', name: 'Rt Salpicao Vivian Kg' },
-  { id: '1441027', name: 'Rt Sanduiche De Forno Kg Bacon' }, { id: '1441019', name: 'Rt Sanduiche De Forno Kg Calabresa' }, { id: '1449176', name: 'Rt Sanduiche De Forno Kg Carne' },
-  { id: '1440993', name: 'Rt Sanduiche De Forno Kg Frango' }, { id: '1441086', name: 'Rt Sanduiche De Forno Kg Hamburguer' }, { id: '1449168', name: 'Rt Sanduiche De Forno Kg Palmito' },
-  { id: '1441000', name: 'Rt Sanduiche De Forno Kg Presunto/Queijo' }, { id: '1449745', name: 'Rt Sanduiche De Forno Kg Salsi/Pres/Quei' }, { id: '1441094', name: 'Rt Sanduiche De Forno Kg Salsicha C/ Frango' },
-  { id: '1452100', name: 'Rt Sobrepa Suina Assado Vivian Kg' }, { id: '1451510', name: 'Rt Torta Salgada Atum Kg' }, { id: '371998', name: 'Rt Torta Salgada Carne Kg' },
-  { id: '853550', name: 'Rt Torta Salgada Frango Kg' }, { id: '1451480', name: 'Rt Torta Salgada Legumes Kg' }, { id: '1106139', name: 'Sa Bauru Calabresa Un' },
-  { id: '1105787', name: 'Sa Bauru Frango Und' }, { id: '1105779', name: 'Sa Bauru Pres/Queijo Un' }, { id: '1105744', name: 'Sa Calzone De Frango Unidade' },
-  { id: '1105752', name: 'Sa Calzone De Palmito Unidade' }, { id: '1105760', name: 'Sa Esfirra Carne Unidade' }, { id: '1105817', name: 'Sa Esfirra Frango Unidade' },
-  { id: '1105795', name: 'Sa X-Burguer Unidade' }
+  { id: '0000000097963', name: 'Rt Salgado Frito Vivian Un' },
+  { id: '0000000005319', name: 'Rt Pizza Semi Pronta Kg' },
+  { id: '0000000005500', name: 'Rt Salgado Frito Grande Un' },
+  { id: '0000000004268', name: 'Rt Sanduiche De Forno Kg' },
+  { id: '0000000003599', name: 'Rt Bolinho Carne Vivian Un' },
+  { id: '0000000046077', name: 'Rt Empada Vivian Un' },
+  { id: '0000000007788', name: 'Rt Pizza Pronta Assada Kg' },
+  { id: '0000000008976', name: 'Mini Pastel Vento Kg' },
+  { id: '0000000003661', name: 'Rt Pao Com Linguiça Kg' },
+  { id: '0000000003610', name: 'Rt Coxinha Costela Un' }
 ];
 
 const PRODUTOS_CONFEITARIA = [
-  { id: '863947', name: 'Cf Alfajor Doce De Leite Kg' }, { id: '163180', name: 'Cf Amendoin Cri Cri Kg' }, { id: '712418', name: 'Cf Biscoito Mantecaus Kg' },
-  { id: '869201', name: 'Cf Bol De Leite Ninho c Avela Kg' }, { id: '1168622', name: 'Cf Bolacha Leite Ninho Kg' }, { id: '1090020', name: 'Cf Bolo Banana C/ Farofa Kg' },
-  { id: '870366', name: 'Cf Bolo Brownie Cremoso Kg' }, { id: '1091883', name: 'Cf Bolo De Cenoura Kg' }, { id: '1128132', name: 'Cf Bolo De Fuba Com Goiabada Kg' },
-  { id: '1143395', name: 'Cf Bolo De Milho Especial Kg' }, { id: '1190725', name: 'Cf Bolo De Pamonha Kg' }, { id: '870161', name: 'Cf Bolo Doce Leite Chocolate Kg' },
-  { id: '870358', name: 'Cf Bolo Doce Leite Festa Kg' }, { id: '710628', name: 'Cf Bolo Doce Leite Kg' }, { id: '712043', name: 'Cf Bolo Gelado Kg' },
-  { id: '1090038', name: 'Cf Bolo Indiano Kg' }, { id: '1431498', name: 'Cf Bolo Matilda Kg' }, { id: '496391', name: 'Cf Bolo Milho Cremoso Kg' },
-  { id: '1139908', name: 'Cf Bolo Natalino Kg' }, { id: '405957', name: 'Cf Bolo Olho De Sogra Kg' }, { id: '924156', name: 'Cf Bolo Pelado Kg' },
-  { id: '1092537', name: 'Cf Bolo Pote Kg' }, { id: '1154273', name: 'Cf Bolo Pote Kg Especial' }, { id: '1168762', name: 'Cf Bolo Rech Brigadeiro Kg' },
-  { id: '615668', name: 'Cf Bolo Sc Aipim Kg' }, { id: '870374', name: 'Cf Bolo Sc Banana Kg' }, { id: '1089390', name: 'Cf Bolo Sc Baunilha Kg' },
-  { id: '398063', name: 'Cf Bolo Sc Cenoura Kg' }, { id: '518247', name: 'Cf Bolo Sc Chocolate Kg' }, { id: '1153790', name: 'Cf Bolo Sc Churros Kg' },
-  { id: '518220', name: 'Cf Bolo Sc Coco Kg' }, { id: '565660', name: 'Cf Bolo Sc Formigueiro Kg' }, { id: '914509', name: 'Cf Bolo Sc Frutas Vermelhas Kg' },
-  { id: '202940', name: 'Cf Bolo Sc Fuba Kg' }, { id: '201693', name: 'Cf Bolo Sc Laranja Kg' }, { id: '635413', name: 'Cf Bolo Sc Leite Condensado Kg' },
-  { id: '996602', name: 'Cf Bolo Sc Limao Kg' }, { id: '863327', name: 'Cf Bolo Sc Marmore Kg' }, { id: '1128124', name: 'Cf Bolo Sc Milho Kg' },
-  { id: '710580', name: 'Cf Bolo Sc Milho Kg' }, { id: '1094963', name: 'Cf Bolo Sc Pacoquita Kg' }, { id: '1143417', name: 'Cf Bolo Sc Pacoquita Kg Recheio' },
-  { id: '864900', name: 'Cf Bomba Brigadeiro Kg' }, { id: '864919', name: 'Cf Bomba Chocolate Kg' }, { id: '864897', name: 'Cf Bomba Creme Kg' },
-  { id: '865176', name: 'Cf Bomba De Creme C/ Morango Kg' }, { id: '870730', name: 'Cf Bomba Dois Amores Kg' }, { id: '200190', name: 'Cf Bomba Kg' },
-  { id: '865214', name: 'Cf Bomba Ouro Branco Kg' }, { id: '865150', name: 'Cf Bomba Sonho Valsa Kg' }, { id: '481394', name: 'Cf Bombocado Kg' },
-  { id: '917516', name: 'Cf Bombom Barras Especial Kg' }, { id: '1178709', name: 'Cf Bombom De Brigadeiro Kg' }, { id: '1178652', name: 'Cf Bombom De Maracuja Kg' },
-  { id: '1178660', name: 'Cf Bombom De Prestigio Kg' }, { id: '865443', name: 'Cf Bombom Especial Kg' }, { id: '769533', name: 'Cf Brevidade Kg' },
-  { id: '864714', name: 'Cf Brigadeirinho Kg' }, { id: '576093', name: 'Cf Brigadeiro Leite Ninho Kg' }, { id: '1178687', name: 'Cf Camafel Nozes Kg' },
-  { id: '835951', name: 'Cf Carolina Brigadeiro Kg' }, { id: '1173960', name: 'Cf Carolina De Creme Kg' }, { id: '201758', name: 'Cf Carolina Doce Leite Kg' },
-  { id: '835994', name: 'Cf Carolina Ninho Kg' }, { id: '1178962', name: 'Cf Carolina Pacoquinha Kg' }, { id: '710695', name: 'Cf Cocada Kg' },
-  { id: '1067664', name: 'Cf Cone Recheado Unidade' }, { id: '344958', name: 'Cf Cookies Kg' }, { id: '1430521', name: 'Cf Coxinha De Morango Kg' },
-  { id: '1120000', name: 'Cf Cri Cri Kg' }, { id: '1112813', name: 'Cf Cupcake Kg' }, { id: '1131940', name: 'Cf Doce Confeitaria Fina Kg' },
-  { id: '846970', name: 'Cf Doce De Leite Condensado Kg' }, { id: '863386', name: 'Cf Donuts Recheado Kg' }, { id: '1002970', name: 'Cf Fios De Ovos Kg' },
-  { id: '981745', name: 'Cf Gelatina Mosaico Kg' }, { id: '930610', name: 'Cf Maca Do Amor Kg' }, { id: '870579', name: 'Cf Macrom Kg' },
-  { id: '512338', name: 'Cf Maria Mole Kg' }, { id: '1170163', name: 'Cf Mini Churros Kg' }, { id: '1430530', name: 'Cf Morango Do Amor Kg' },
-  { id: '1178695', name: 'Cf Mousse Especial Kg' }, { id: '1064363', name: 'Cf Mousse Mini Kg' }, { id: '778605', name: 'Cf Muffins Chocolate C/ Gotas Kg' },
-  { id: '639702', name: 'Cf Muffins Sabores Kg' }, { id: '1084240', name: 'Cf Ovo Pascoa Colh Confete Kg' }, { id: '1147943', name: 'Cf Ovo Pascoa Colh Limão Kg' },
-  { id: '1176641', name: 'Cf Ovo Pascoa Colher Ninho Kg' }, { id: '1177869', name: 'Cf Ovo Pascoa Colher Brigadeiro Kg' }, { id: '1177877', name: 'Cf Ovo Pascoa Kg 2 Amores' },
-  { id: '1177893', name: 'Cf Ovo Pascoa Kg Ferrero Rocher' }, { id: '1177931', name: 'Cf Ovo Pascoa Kg Maracuja' }, { id: '1177885', name: 'Cf Ovo Pascoa Kg Ninho C/ Creme Avelã Kg' },
-  { id: '1177850', name: 'Cf Ovo Pascoa Kg Oreo' }, { id: '478881', name: 'Cf Pacoquinha Amendoim Kg' }, { id: '1168592', name: 'Cf Pacoquinha Colher Kg' },
-  { id: '809519', name: 'Cf Pao De Mel Kg' }, { id: '1439090', name: 'Cf Pao De Mel Uni' }, { id: '1128230', name: 'Cf Pastel De Leite Ninho Kg' },
-  { id: '865907', name: 'Cf Pave Cafe Kg' }, { id: '870145', name: 'Cf Pave Chocolate Kg' }, { id: '870200', name: 'Cf Pave Frutas Kg' },
-  { id: '870196', name: 'Cf Pave c t Nata Kg' }, { id: '1448560', name: 'Cf Pavê De Capuccino Kg' }, { id: '566209', name: 'Cf Pe De Moleque Kg' },
-  { id: '870455', name: 'Cf Petifour De Chocolate Kg' }, { id: '824089', name: 'Cf Pudim Caseiro Kg' }, { id: '571482', name: 'Cf Pudim De Iogurte Kg' },
-  { id: '201790', name: 'Cf Pudim Leite Condensado Kg' }, { id: '504939', name: 'Cf Queijadinha Kg' }, { id: '1186426', name: 'Cf Quindin Kg' },
-  { id: '846953', name: 'Cf Rocambole 4 Leites Kg' }, { id: '809314', name: 'Cf Rocambole Brigadeiro Kg' }, { id: '407321', name: 'Cf Rocambole Doce Leite Kg' },
-  { id: '1168576', name: 'Cf Rocambole Dois Amor Kg' }, { id: '484199', name: 'Cf Rocambole Especial Kg' }, { id: '869821', name: 'Cf Rocambole Goiabada Kg' },
-  { id: '1178890', name: 'Cf Rocambole Leite Ninho C/Nutella Kg' }, { id: '1115090', name: 'Cf Rocambole Leite Ninho Kg' }, { id: '869864', name: 'Cf Rocambole Prestigio Kg' },
-  { id: '576484', name: 'Cf Rosca Santa Clara Kg' }, { id: '870625', name: 'Cf Samantinha Kg' }, { id: '870510', name: 'Cf Sobremesa Leite Moca Kg' },
-  { id: '924938', name: 'Cf Sobremesa Natalina Kg' }, { id: '863602', name: 'Cf Sonho De Creme Kg' }, { id: '199230', name: 'Cf Sonho De Doce De Leite Kg' },
-  { id: '863637', name: 'Cf Sonho De Nata Kg' }, { id: '199290', name: 'Cf Suspiro Kg' }, { id: '924326', name: 'Cf Torta Mousse Chocolate Kg' },
-  { id: '870382', name: 'Cf Torta 4 Leites Kg' }, { id: '1123572', name: 'Cf Torta Alemã Kg' }, { id: '518182', name: 'Cf Torta Banana Kg' },
-  { id: '1091557', name: 'Cf Torta Banoffee Kg' }, { id: '838497', name: 'Cf Torta Brigadeiro Kg' }, { id: '869333', name: 'Cf Torta De Frutas Kg' },
-  { id: '869651', name: 'Cf Torta De Nozes Kg' }, { id: '809497', name: 'Cf Torta Dois Amores Kg' }, { id: '924172', name: 'Cf Torta Ferrero Rocher Kg' },
-  { id: '710750', name: 'Cf Torta Floresta Negra Kg' }, { id: '1208292', name: 'Cf Torta Frutas Vermelhas Kg' }, { id: '866687', name: 'Cf Torta Holandesa Kg' },
-  { id: '527394', name: 'Cf Torta Laka Kg' }, { id: '464082', name: 'Cf Torta Limao Kg' }, { id: '812129', name: 'Cf Torta Mineira Kg' },
-  { id: '201260', name: 'Cf Torta Morango Kg' }, { id: '924164', name: 'Cf Torta Ninho C/ Avela Kg' }, { id: '710768', name: 'Cf Torta Ouro Branco Kg' },
-  { id: '199150', name: 'Cf Torta Prestrigo Suprema Kg' }, { id: '1120441', name: 'Cf Torta Red Velvet Kg' }, { id: '199184', name: 'Cf Torta Sonho De Valsa Kg' },
-  { id: '719285', name: 'Cf Torta Suflair Kg' }, { id: '712051', name: 'Cf Torta Tentacao Chocolate Morango Kg' }, { id: '521787', name: 'Cf Torta Tentacao Kg' },
-  { id: '812285', name: 'Cf Torta Tipo Kinder Ovo Kg' }, { id: '869554', name: 'Cf Torta Trufada De Nata Kg' }, { id: '1349937', name: 'Cf Torta Unidade' },
-  { id: '870587', name: 'Cf Torteleta Chocolate Kg' }, { id: '870536', name: 'Cf Torteleta Maracuja Kg' }, { id: '605603', name: 'Cf Torteleta Morango Kg' },
-  { id: '870595', name: 'Cf Tortelete Kg' }, { id: '870528', name: 'Cf Tortelete Limao Kg' }, { id: '921122', name: 'Cf Tortelete Sabores Un' },
-  { id: '1402404', name: 'Churros Kg Gourmet' }, { id: '976121', name: 'Churros Mini Kg Chocolate' }, { id: '1000160', name: 'Churros Un Choc' },
-  { id: '1120450', name: 'Croissant Chocolate Kg' }, { id: '1090046', name: 'Rocambole Brigadeiro Doce Doce Kg' }, { id: '574783', name: 'Sub Bolo Pao De Lo Chocolate Placa Kg' },
-  { id: '919748', name: 'Sub Bolo Pao De Lo Placa Branca Kg' }
+  { id: '0000000008518', name: 'Cf Bolo Doce Leite Kg' },
+  { id: '0000000058582', name: 'Churros Un' },
+  { id: '0000000031875', name: 'Cf Torta Brigadeiro Kg' },
+  { id: '0000000005739', name: 'Cf Bolo Sc Chocolate Kg' },
+  { id: '0000000038841', name: 'Cf Torteleta Morango Kg' },
+  { id: '0000000005798', name: 'Cf Bolo Sc Limao Kg' },
+  { id: '0000000005763', name: 'Cf Bolo Sc Formigueiro Kg' },
+  { id: '0000000005801', name: 'Cf Bolo Sc Milho Kg' },
+  { id: '0000000008526', name: 'Cf Bolo Gelado Kg' },
+  { id: '0000000032588', name: 'Cf Rocambole Doce Leite Kg' }
 ];
 
 // 2. TAREFAS
@@ -302,7 +210,7 @@ const TASK_DATA: any = {
     { description: 'DIA: Lista dos itens que acabou de chegar (Verificar se já está na área de venda)', periodicity: 'DIÁRIO' },
     { description: 'PRECIFICAÇÃO: Todos os cartazes estão legíveis?', periodicity: 'DIÁRIO' },
     { description: 'PRECIFICAÇÃO: Na área de venda possui rupturas? ', periodicity: 'DIÁRIO' },
-    { description: 'REPOSIÇÃO: Corredores and prateleiras limpos e organizados (paredão visual)', periodicity: 'DIÁRIO' },
+    { description: 'REPOSIÇÃO: Corredores e prateleiras limpos e organizados (paredão visual)', periodicity: 'DIÁRIO' },
     { description: 'VALIDADE: Pegar a lista dos produtos próximo e vencimento e suas quantidades, para traçar plano de ação sendo exposição e preço agressivo, buscando venda rápida', periodicity: 'DIÁRIO' },
     { description: 'GESTÃO: Distribuir tarefas entre repositores (foco em ofertas e tabloide)', periodicity: 'DIÁRIO' },
     { description: 'GESTÃO: Corredores desobstruídos, passagem livre para clientes. Gondolas abastecidas, pontos extras abastecidos. Precificação. Cartaz.', periodicity: 'DIÁRIO' },
@@ -358,6 +266,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [department, setDepartment] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [currentPeriodicity, setCurrentPeriodicity] = useState('DIÁRIO');
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -458,7 +367,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       return alert("ESTE ITEM JÁ ESTÁ NA LISTA!");
     }
     
-    // --- ATUALIZADO: DEFINIÇÃO DE HORÁRIOS APENAS PARA 10h e 15h ---
     const newItem = {
       ...item,
       statuses: { '10:00': null, '15:00': null },
@@ -471,7 +379,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   const handleRemoveTop10 = (category: string, id: string) => {
     if (category === 'Padaria') saveTop10Local(category, top10Padaria.filter(i => i.id !== id));
     if (category === 'Rotisseria') saveTop10Local(category, top10Rotisseria.filter(i => i.id !== id));
-    if (category === 'Confeitaria', top10Confeitaria.filter(i => i.id !== id));
+    if (category === 'Confeitaria') saveTop10Local(category, top10Confeitaria.filter(i => i.id !== id));
   };
 
   const getFilteredProducts = () => {
@@ -977,7 +885,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   const handleLogin = () => {
     // @ts-ignore
     const senhaCorreta = senhasBanco[department];
-    if ((senhaCorreta && senhaCorreta === password) || (department === 'Padaria-Confeitaria-Rotisseria' && password === 'pcr123')) {
+    if (
+      (senhaCorreta && senhaCorreta === password) || 
+      (department === 'Padaria-Confeitaria-Rotisseria' && password === 'pcr123')
+    ) {
       localStorage.setItem('user_auth', department.toLowerCase());
       setIsAuthenticated(true);
       window.location.reload(); 
@@ -1003,7 +914,32 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
               <button onClick={() => setDepartment('TESTE_SISTEMA')} className={`w-full p-5 border-2 rounded-2xl font-bold uppercase text-xs transition-all ${department === 'TESTE_SISTEMA' ? 'bg-amber-500 text-black border-amber-500 shadow-md' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-amber-100'}`}>
                 {department === 'TESTE_SISTEMA' ? '✅ SETOR DE TESTE ATIVADO' : '👉 CLIQUE AQUI PARA ATIVAR O TESTE'}
               </button>
-              <input type="password" placeholder="SENHA: teste123" className="w-full p-6 bg-slate-50 border-2 border-amber-500 rounded-2xl text-center text-2xl outline-none font-black text-slate-900 shadow-inner uppercase italic" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+              <div className="relative w-full">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  placeholder="SENHA: teste123" 
+                  className="w-full p-6 bg-slate-50 border-2 border-amber-500 rounded-2xl text-center text-2xl outline-none font-black text-slate-900 shadow-inner uppercase italic pr-16" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()} 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  className="absolute right-5 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition-opacity flex items-center justify-center w-10 h-10"
+                >
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-slate-800">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-slate-800">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               <button onClick={handleLogin} className="w-full bg-black text-white font-black py-6 rounded-2xl shadow-xl active:scale-95 text-xl italic uppercase font-black italic">ENTRAR NO TESTE</button>
               <button onClick={resetarAppDeTeste} className="w-full bg-red-600 text-white font-black py-4 rounded-2xl shadow-xl active:scale-95 text-sm italic uppercase mt-4">🧹 ZERAR DADOS DO APP</button>
             </div>
@@ -1025,7 +961,32 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
               <option value="">SELECIONE O SETOR</option>
               {SETORES_LISTA.map(dept => <option key={dept} value={dept}>{dept}</option>)}
             </select>
-            <input type="password" placeholder="SENHA" className="w-full p-6 bg-slate-50 border-2 border-indigo-500 rounded-2xl text-center text-2xl outline-none font-black text-slate-900 shadow-inner uppercase italic font-black italic" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+            <div className="relative w-full">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                placeholder="SENHA" 
+                className="w-full p-6 bg-slate-50 border-2 border-indigo-500 rounded-2xl text-center text-2xl outline-none font-black text-slate-900 shadow-inner uppercase italic font-black italic pr-16" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()} 
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)} 
+                className="absolute right-5 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition-opacity flex items-center justify-center w-10 h-10"
+              >
+                {showPassword ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-slate-800">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-slate-800">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                  </svg>
+                )}
+              </button>
+            </div>
             <button onClick={handleLogin} className="w-full bg-black text-white font-black py-6 rounded-2xl shadow-xl active:scale-95 text-xl italic uppercase font-black italic">ENTRAR</button>
           </div>
         </div>
@@ -1277,6 +1238,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                     )}
                     {task.status !== 'Aguardando' && currentPeriodicity !== 'PENDÊNCIAS' && (
                       <div className="space-y-4 pt-4 border-t border-slate-200 font-black italic">
+                        
                         {task.status === 'Não Conforme' && (
                           <>
                             <div className="bg-amber-100 p-5 rounded-[2rem] border-2 border-amber-300 w-full mb-2">
@@ -1315,6 +1277,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                             </div>
                           </>
                         )}
+
                         {!task.frozen && <button onClick={() => freezeTask(idx)} className="w-full bg-indigo-500 text-white py-4 rounded-2xl text-[10px] font-black uppercase italic shadow-lg active:scale-95 border-b-4 border-indigo-700 text-white font-black italic">✓ FINALIZAR ESTA TAREFA</button>}
                       </div>
                     )}
@@ -1390,7 +1353,9 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         {/* 🚀 BOTÃO DE FINALIZAR */}
         {!isLockedToday && !foraDoHorario && currentPeriodicity !== 'PENDÊNCIAS' && (
           <footer className="p-8 bg-slate-50 text-center border-t border-slate-200 rounded-b-[3.5rem] font-black italic">
-            <button onClick={submitChecklist} disabled={loading} className={`w-full py-7 rounded-[2.5rem] shadow-xl text-xl transition-all active:scale-95 font-black italic uppercase border-b-8 font-black italic ${loading ? 'bg-slate-400 border-slate-500 font-black italic' : 'bg-black text-white border-slate-800 hover:bg-slate-900 font-black italic'}`}>{loading ? 'SINCRONIZANDO...' : currentPeriodicity === 'TOP 10' ? 'SALVAR ACOMPANHAMENTO TOP 10' : `FINALIZAR AUDITORIA`}</button>
+            <button onClick={submitChecklist} disabled={loading} className={`w-full py-7 rounded-[2.5rem] shadow-xl text-xl transition-all active:scale-95 font-black italic uppercase border-b-8 font-black italic ${loading ? 'bg-slate-400 border-slate-500 font-black italic' : 'bg-black text-white border-slate-800 hover:bg-slate-900 font-black italic'} text-white font-black italic`}>
+              {loading ? 'SINCRONIZANDO...' : currentPeriodicity === 'TOP 10' ? 'SALVAR ACOMPANHAMENTO TOP 10' : `FINALIZAR AUDITORIA`}
+            </button>
           </footer>
         )}
       </div>
