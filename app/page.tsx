@@ -74,7 +74,7 @@ const PRODUTOS_ROTISSERIA = [
   { id: '0000000097963', name: 'Rt Salgado Frito Vivian Un' },
   { id: '0000000005319', name: 'Rt Pizza Semi Pronta Kg' },
   { id: '0000000005500', name: 'Rt Salgado Frito Grande Un' },
-  { id: '0000000004268', name: 'Rt Sanduiche De Forno Kg' },
+  { id: '0000000006804', name: 'Rt Sanduíche de Forno Kg Frango' },
   { id: '0000000003599', name: 'Rt Bolinho Carne Vivian Un' },
   { id: '0000000046077', name: 'Rt Empada Vivian Un' },
   { id: '0000000007788', name: 'Rt Pizza Pronta Assada Kg' },
@@ -242,8 +242,7 @@ const TASK_DATA: any = {
     { description: 'ROTISSERIA: Balcão térmico ligado e temperatura conferida para o início do serviço?', periodicity: 'DIÁRIO' },
     { description: 'LIMPEZA: Área de manipulação, formas, maquinários e utensílios limpos e higienizados?', periodicity: 'DIÁRIO' },
     { description: 'VALIDADE: Ronda diária de insumos e matérias-primas na câmara fria e estoque do setor?', periodicity: 'DIÁRIO' },
-    { description: 'SEMANAL: Programação de produção para os itens de festival ou apostas do fim de semana?', periodicity: 'SEMANAL' },
-    { description: 'GESTÃO: Escala de trabalho e folgas da equipe alinhadas?', periodicity: 'SEMANAL' },
+    { description: 'SEMANAL: Programação de produção para os itens de festival ou apostas do fim de semana?', periodicity: 'SEMANAL' }
   ]
 };
 
@@ -626,6 +625,33 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     } catch (e) { console.error("Erro ao salvar no IndexedDB", e); }
   };
 
+  // 🚀 LÓGICA DE AUTO-FREEZE INTELIGENTE E BLINDADA
+  const checkAutoFreeze = (currentIdx: number, currentTasks: any[]) => {
+    return currentTasks.map((task, tIdx) => {
+      if (tIdx !== currentIdx && !task.frozen && task.status !== 'Aguardando') {
+        let isComplete = true;
+        
+        if (task.subStatuses && Object.values(task.subStatuses).includes('Aguardando')) {
+           isComplete = false;
+        } else if (task.status === 'Não Conforme') {
+           if (!task.photos || task.photos.length === 0 || !task.observation || task.observation.trim().length < 15) {
+              isComplete = false;
+           }
+        } else if (task.status === 'Conforme' && department === 'Padaria-Confeitaria-Rotisseria') {
+           // A padaria exige foto também no Conforme
+           if (!task.photos || task.photos.length === 0) {
+              isComplete = false;
+           }
+        }
+
+        if (isComplete) {
+           return { ...task, frozen: true };
+        }
+      }
+      return task;
+    });
+  };
+
   const finalizarResolucao = async () => {
     if (!supabase || !tratativaTexto || tratativaTexto.trim().length < 10) return alert("DESCREVA A TRATATIVA REALIZADA COM MAIS DETALHES!");
     setLoading(true);
@@ -645,65 +671,56 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   const handleSubStatusChange = (idx: number, subItem: string, clickedStatus: string) => {
     const realIdx = tasks.indexOf(filteredTasks[idx]);
     if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
-    const newTasks = [...tasks];
+    let newTasks = [...tasks];
+    
     newTasks[realIdx].subStatuses[subItem] = newTasks[realIdx].subStatuses[subItem] === clickedStatus ? 'Aguardando' : clickedStatus;
     const statuses = Object.values(newTasks[realIdx].subStatuses);
     if (statuses.includes('Não Conforme')) { newTasks[realIdx].status = 'Não Conforme';
     } else if (statuses.includes('Aguardando')) { newTasks[realIdx].status = 'Aguardando'; } else { newTasks[realIdx].status = 'Conforme'; }
     
-    const isPadaria = department === 'Padaria-Confeitaria-Rotisseria';
-    newTasks.forEach((task, tIdx) => {
-      if (tIdx !== realIdx && !task.frozen && task.status !== 'Aguardando') {
-        const canAutoFreeze = 
-           (task.status === 'Conforme' && (!isPadaria || (task.photos && task.photos.length > 0))) || 
-           (task.status === 'Não Conforme' && task.observation?.trim().length >= 15 && task.photos && task.photos.length > 0);
-        if (canAutoFreeze && !task.subStatuses) newTasks[tIdx].frozen = true;
-      }
-    });
+    newTasks = checkAutoFreeze(realIdx, newTasks);
     saveState(newTasks);
   };
 
   const handleStatusChange = (idx: number, clickedStatus: string) => {
     const realIdx = tasks.indexOf(filteredTasks[idx]);
     if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
-    const newTasks = [...tasks];
-    
-    const isPadaria = department === 'Padaria-Confeitaria-Rotisseria';
-    newTasks.forEach((task, tIdx) => {
-      if (tIdx !== realIdx && !task.frozen && task.status !== 'Aguardando') {
-        const canAutoFreeze = 
-           (task.status === 'Conforme' && (!isPadaria || (task.photos && task.photos.length > 0))) || 
-           (task.status === 'Não Conforme' && task.observation?.trim().length >= 15 && task.photos && task.photos.length > 0);
-        if (canAutoFreeze && !task.subStatuses) newTasks[tIdx].frozen = true;
-      }
-    });
+    let newTasks = [...tasks];
     
     newTasks[realIdx].status = newTasks[realIdx].status === clickedStatus ? 'Aguardando' : clickedStatus;
+    
+    newTasks = checkAutoFreeze(realIdx, newTasks);
     saveState(newTasks);
   };
 
   const updateTaskData = (idx: number, field: string, value: string) => {
     const realIdx = tasks.indexOf(filteredTasks[idx]);
     if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
-    const newTasks = [...tasks];
+    let newTasks = [...tasks];
     newTasks[realIdx][field] = value;
+    
+    newTasks = checkAutoFreeze(realIdx, newTasks);
     saveState(newTasks);
   };
 
   const handleAddPhoto = (idx: number, photoBase64: any) => {
     const realIdx = tasks.indexOf(filteredTasks[idx]);
     if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
-    const newTasks = [...tasks];
+    let newTasks = [...tasks];
     if (!newTasks[realIdx].photos) newTasks[realIdx].photos = [];
     newTasks[realIdx].photos.push(photoBase64);
+    
+    newTasks = checkAutoFreeze(realIdx, newTasks);
     saveState(newTasks);
   };
 
   const handleRemovePhoto = (taskIdx: number, photoIdx: number) => {
     const realIdx = tasks.indexOf(filteredTasks[taskIdx]);
     if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
-    const newTasks = [...tasks];
+    let newTasks = [...tasks];
     newTasks[realIdx].photos.splice(photoIdx, 1);
+    
+    newTasks = checkAutoFreeze(realIdx, newTasks);
     saveState(newTasks);
   };
 
@@ -722,8 +739,12 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         if (!task.photos || task.photos.length === 0) return alert("A PADARIA EXIGE FOTO TAMBÉM NAS TAREFAS CONFORME!");
     }
 
-    const newTasks = [...tasks];
+    let newTasks = [...tasks];
     newTasks[realIdx].frozen = true;
+    
+    // Aproveita para tentar auto-finalizar as outras abertas e prontas
+    newTasks = checkAutoFreeze(-1, newTasks); // -1 força checagem em todas
+    
     saveState(newTasks);
   };
 
@@ -833,6 +854,28 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     }
 
     const currentPeriodTasks = tasks.filter(t => t.periodicity === currentPeriodicity);
+
+    // 🚀 LÓGICA DE VALIDAÇÃO EXCLUSIVA PARA O MODO DE TESTES POR ABA
+    if (isTeste && department === 'TESTE_SISTEMA') {
+      const testSectorTasks = currentPeriodTasks.filter(t => t.testSector === activeTestSector || (!t.testSector && activeTestSector === 'GERAL'));
+      const unfrozenTestTasks = testSectorTasks.filter(t => !t.frozen);
+
+      if (unfrozenTestTasks.length > 0) {
+          return alert(`FALTAM ${unfrozenTestTasks.length} TAREFAS PARA FINALIZAR A ABA ${activeTestSector}!`);
+      }
+
+      // Reseta apenas a aba atual testada para não travar o restante
+      const resetTasks = tasks.map(t => {
+          if (t.periodicity === currentPeriodicity && (t.testSector === activeTestSector || (!t.testSector && activeTestSector === 'GERAL'))) {
+              return { ...t, status: 'Aguardando', observation: '', photos: [], frozen: false, subStatuses: t.subItems ? t.subItems.reduce((acc:any, i:string)=>({...acc, [i]: 'Aguardando'}), {}) : null };
+          }
+          return t;
+      });
+      saveState(resetTasks);
+      return alert(`🚀 MODO TESTE: SETOR ${activeTestSector} FINALIZADO COM SUCESSO!\n\nAs tarefas desta aba foram limpas para você continuar os testes.`);
+    }
+
+    // 🚀 LÓGICA NORMAL DE PRODUÇÃO
     const unfrozenTasks = currentPeriodTasks.filter(t => !t.frozen);
     if (unfrozenTasks.length > 0) return alert(`FALTAM ${unfrozenTasks.length} TAREFAS PARA FINALIZAR NESTA AUDITORIA!`);
 
@@ -1284,7 +1327,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                     {task.status !== 'Aguardando' && currentPeriodicity !== 'PENDÊNCIAS' && (
                       <div className="space-y-4 pt-4 border-t border-slate-200 font-black italic">
                         
-                        {/* 🚀 CÂMERA E OBSERVAÇÃO MOSTRADOS PARA NC OU PADARIA EM CONFORME */}
+                        {/* 🚀 EXIBIR CÂMERA E TEXTO SOMENTE SE FOR "NÃO CONFORME" OU FOR DA PADARIA EM "CONFORME" */}
                         {(task.status === 'Não Conforme' || (task.status === 'Conforme' && department === 'Padaria-Confeitaria-Rotisseria')) && (
                           <>
                             {task.status === 'Não Conforme' && (
@@ -1402,7 +1445,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         {!isLockedToday && !foraDoHorario && currentPeriodicity !== 'PENDÊNCIAS' && (
           <footer className="p-8 bg-slate-50 text-center border-t border-slate-200 rounded-b-[3.5rem] font-black italic">
             <button onClick={submitChecklist} disabled={loading} className={`w-full py-7 rounded-[2.5rem] shadow-xl text-xl transition-all active:scale-95 font-black italic uppercase border-b-8 font-black italic ${loading ? 'bg-slate-400 border-slate-500 font-black italic' : 'bg-black text-white border-slate-800 hover:bg-slate-900 font-black italic'} text-white font-black italic`}>
-              {loading ? 'SINCRONIZANDO...' : currentPeriodicity === 'TOP 10' ? 'SALVAR ACOMPANHAMENTO TOP 10' : `FINALIZAR AUDITORIA`}
+              {loading ? 'SINCRONIZANDO...' : currentPeriodicity === 'TOP 10' ? 'SALVAR ACOMPANHAMENTO TOP 10' : (isTeste && department === 'TESTE_SISTEMA') ? `FINALIZAR SETOR: ${activeTestSector}` : `FINALIZAR AUDITORIA`}
             </button>
           </footer>
         )}
