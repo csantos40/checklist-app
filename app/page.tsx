@@ -637,12 +637,8 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
            if (!task.photos || task.photos.length === 0 || !task.observation || task.observation.trim().length < 15) {
               isComplete = false;
            }
-        } else if (task.status === 'Conforme' && department === 'Padaria-Confeitaria-Rotisseria') {
-           // A padaria exige foto também no Conforme
-           if (!task.photos || task.photos.length === 0) {
-              isComplete = false;
-           }
         }
+        // 🚀 OBRIGATORIEDADE DE FOTO PARA PADARIA EM CONFORME FOI REMOVIDA DAQUI!
 
         if (isComplete) {
            return { ...task, frozen: true };
@@ -735,9 +731,8 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (task.status === 'Não Conforme') {
         if (!task.photos || task.photos.length === 0) return alert("NÃO CONFORME EXIGE PELO MENOS UMA FOTO!");
         if (!task.observation || task.observation.trim().length < 15) return alert("A RÉPLICA PARA O RH ESTÁ MUITO CURTA! Detalhe melhor o problema (Mínimo 15 caracteres).");
-    } else if (task.status === 'Conforme' && department === 'Padaria-Confeitaria-Rotisseria') {
-        if (!task.photos || task.photos.length === 0) return alert("A PADARIA EXIGE FOTO TAMBÉM NAS TAREFAS CONFORME!");
     }
+    // 🚀 OBRIGATORIEDADE DE FOTO PARA PADARIA EM CONFORME FOI REMOVIDA DAQUI TAMBÉM!
 
     let newTasks = [...tasks];
     newTasks[realIdx].frozen = true;
@@ -1327,16 +1322,14 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                     {task.status !== 'Aguardando' && currentPeriodicity !== 'PENDÊNCIAS' && (
                       <div className="space-y-4 pt-4 border-t border-slate-200 font-black italic">
                         
-                        {/* 🚀 EXIBIR CÂMERA E TEXTO SOMENTE SE FOR "NÃO CONFORME" OU FOR DA PADARIA EM "CONFORME" */}
-                        {(task.status === 'Não Conforme' || (task.status === 'Conforme' && department === 'Padaria-Confeitaria-Rotisseria')) && (
+                        {/* 🚀 EXIBIR CÂMERA E TEXTO SOMENTE SE FOR "NÃO CONFORME" */}
+                        {task.status === 'Não Conforme' && (
                           <>
-                            {task.status === 'Não Conforme' && (
-                              <div className="bg-amber-100 p-5 rounded-[2rem] border-2 border-amber-300 w-full mb-2">
-                                <p className="text-[10px] text-amber-800 font-black uppercase italic mb-2">🗣️ JUSTIFICATIVA / RÉPLICA PARA O RH:</p>
-                                <textarea disabled={task.frozen} placeholder="Explique detalhadamente o motivo para o RH..." className="w-full p-4 rounded-2xl border border-amber-300 text-black font-bold outline-none text-sm uppercase italic shadow-inner bg-white min-h-[80px]" value={task.observation} onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} />
-                                {!task.frozen && <p className={`text-[8px] text-right mt-2 uppercase font-black ${task.observation?.length >= 15 ? 'text-green-600' : 'text-red-500'}`}>{task.observation?.length || 0}/15 CARACTERES EXIGIDOS</p>}
-                              </div>
-                            )}
+                            <div className="bg-amber-100 p-5 rounded-[2rem] border-2 border-amber-300 w-full mb-2">
+                              <p className="text-[10px] text-amber-800 font-black uppercase italic mb-2">🗣️ JUSTIFICATIVA / RÉPLICA PARA O RH:</p>
+                              <textarea disabled={task.frozen} placeholder="Explique detalhadamente o motivo para o RH..." className="w-full p-4 rounded-2xl border border-amber-300 text-black font-bold outline-none text-sm uppercase italic shadow-inner bg-white min-h-[80px]" value={task.observation} onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} />
+                              {!task.frozen && <p className={`text-[8px] text-right mt-2 uppercase font-black ${task.observation?.length >= 15 ? 'text-green-600' : 'text-red-500'}`}>{task.observation?.length || 0}/15 CARACTERES EXIGIDOS</p>}
+                            </div>
                             <div className="flex flex-wrap gap-3 items-center font-black italic">
                               {task.photos?.map((p: string, pIdx: number) => (
                                   <div key={pIdx} className="w-16 h-16 rounded-xl border-2 border-amber-300 overflow-hidden shadow-sm relative font-black italic">
