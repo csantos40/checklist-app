@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { SETORES_LISTA, PRODUTOS_PADARIA, PRODUTOS_ROTISSERIA, PRODUTOS_CONFEITARIA, TASK_DATA } from './data/tasksData';
 
 // --- 🚀 FUNÇÕES DO BANCO DE DADOS LOCAL (INDEXEDDB) ---
 const DB_NAME = 'VivianAuditoriaDB';
@@ -52,210 +53,6 @@ const removeFromIndexedDB = async (key: string) => {
     tx.onerror = () => reject(tx.error);
   });
 };
-// -----------------------------------------------------------
-
-const SETORES_LISTA = ["Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios e Laticínios)", "Padaria-Confeitaria-Rotisseria"];
-
-// --- 🍞 LISTAS FIXAS ATUALIZADAS DO TOP 10 ---
-const PRODUTOS_PADARIA = [
-  { id: '0000000003384', name: 'Pd Pao Frances Kg' },
-  { id: '0000000033350', name: 'Pd Pao Caseirinho Kg' },
-  { id: '0000000007252', name: 'Pd Pao Caseiro Da Vovo Kg' },
-  { id: '0000000020268', name: 'Pd Pao De Queijo Kg' },
-  { id: '0000000002912', name: 'Pd Cueca Virada Kg' },
-  { id: '0000000008914', name: 'Pd Pao De Forma Kg' },
-  { id: '0000000001328', name: 'Pd Biscoito Mineiro Kg' },
-  { id: '0000000021005', name: 'Pd Donuts Sabores Un' },
-  { id: '0000000007313', name: 'Pd Pao De Leite Kg' },
-  { id: '0000000006453', name: 'Pd Pao De Queijo Tradicional Kg' }
-];
-
-const PRODUTOS_ROTISSERIA = [
-  { id: '0000000097963', name: 'Rt Salgado Frito Vivian Un' },
-  { id: '0000000005319', name: 'Rt Pizza Semi Pronta Kg' },
-  { id: '0000000005500', name: 'Rt Salgado Frito Grande Un' },
-  { id: '0000000006804', name: 'Rt Sanduíche de Forno Kg Frango' },
-  { id: '0000000003599', name: 'Rt Bolinho Carne Vivian Un' },
-  { id: '0000000046077', name: 'Rt Empada Vivian Un' },
-  { id: '0000000007788', name: 'Rt Pizza Pronta Assada Kg' },
-  { id: '0000000008976', name: 'Mini Pastel Vento Kg' },
-  { id: '0000000096478', name: 'Rt Lanche Hamburguer Da Casa Kg' },
-  { id: '0000000001281', name: 'Rt Pizza Da Casa 600g' }
-];
-
-const PRODUTOS_CONFEITARIA = [
-  { id: '0000000008518', name: 'Cf Bolo Doce Leite Kg' },
-  { id: '0000000058582', name: 'Churros Un' },
-  { id: '0000000031875', name: 'Cf Torta Brigadeiro Kg' },
-  { id: '0000000005739', name: 'Cf Bolo Sc Chocolate Kg' },
-  { id: '0000000065429', name: 'Cf Bolo Doce Leite Chocolate Kg' },
-  { id: '0000000006873', name: 'Cf Carolina Kg' },
-  { id: '0000000007054', name: 'Cf Torta Suflair Kg' },
-  { id: '0000000085694', name: 'Cf Torta Mineira Kg' },
-  { id: '0000000007245', name: 'Cf Brigadeirinho Kg' },
-  { id: '0000000054218', name: 'Cf Bolo De Cenoura Kg' }
-];
-
-// 2. TAREFAS
-const TASK_DATA: any = {
-  'TESTE_SISTEMA': [
-    { description: 'TESTE: Validar se a foto está subindo', periodicity: 'DIÁRIO' },
-    { description: 'TESTE: Validar se a observação salva', periodicity: 'DIÁRIO' },
-  ],
-  'Gerente': [
-    { description: 'V.O. MANHÃ: Preços no sistema / PDV (Atualização de preços no sistema)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Balcões de padaria (abastecimento, precificação, qualidade, limpeza, equipamentos)', periodicity: 'DIÁRIO' },
-    { 
-      description: 'V.O. MANHÃ: Balcões de frios (abastecimento, precificação, qualidade, limpeza, equipamentos)', 
-      periodicity: 'DIÁRIO',
-      subItems: ['FATIADOS', 'IOGURTES', 'MARGARINAS', 'EMBUTIDOS/MASSAS', 'GELADEIRAS/FREEZERS-SORVERTES']
-    },
-    { description: 'V.O. MANHÃ: REPOSIÇÃO (área de venda sem buracos), ver produtos em falta e repassar ao encarregado', periodicity: 'DIÁRIO' },
-    { 
-      description: 'V.O. MANHÃ: Balcões de açougue (abastecimento, precificação, qualidade, limpeza)', 
-      periodicity: 'DIÁRIO',
-      subItems: ['LINGUIÇA', 'CARNE BOVINA', 'CARNE SUÍNA', 'CARNE AVES', 'PÃO DE ALHO'] 
-    },
-    { description: 'V.O. MANHÃ: Bebidas frias geladeiras abastecidas constantes', periodicity: 'DIÁRIO', 
-      subItems: ['GELADEIRAS FRENTE DE CAIXA', 'GELADEIRAS LINHA COCA-COLA', 'GELADEIRAS REFRIGERANTES/CERVEJAS'] 
-    },
-    { description: 'V.O. MANHÃ: Cartazeamento dentro e fora da loja (Validade, descrição, local correto)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Depósito organizado e limpo', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Equipamentos em funcionamento (refrigeradores, freezers, iluminação...)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Hortifruti (Qualidade, precificação, abastecimento, cartazeamento)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Limpeza e organização dos banheiros e frente de caixa', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Ofertas do dia (abastecimento, precificação)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Pontos extras (Abastecimento, precificação, validade)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Precificação (todos os produtos com a etiqueta de preço)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Som do rádio interno (volume, ruídos...)', periodicity: 'DIÁRIO' },
-    { description: 'DIA: Acompanhar vendas, perdas, margem versus a META do dia anterior/acumulado mês', periodicity: 'DIÁRIO' },
-    { description: 'DIA: Verificar rupturas na área de venda e acionar o responsável imediatamente', periodicity: 'DIÁRIO' },
-    { description: 'DIA: Comunicar apostas comerciais ao time de encarregados', periodicity: 'DIÁRIO' },
-    { description: 'DIA: Ruptura crítica (itens de curva A)', periodicity: 'DIÁRIO' },
-    { description: 'DIA: Acompanhamentos vendas dos itens das ofertas, se a exposição foi em aceita', periodicity: 'DIÁRIO' },   
-    { description: 'DIA: Preparação para os festivais, degustações, ofertas do dia (cartazeamento, exposição)', periodicity: 'DIÁRIO' },
-    { description: 'DIA: Acompanhar divergências no recebimento (quantidade e valor e após entender junto com o comercial e CPD loja os motivos para a correção.', periodicity: 'DIÁRIO' },
-    { description: 'SEMANAL: Toda sexta-feira: Definir ofertas do hortifruti', periodicity: 'SEMANAL' },
-    { description: 'SEMANAL: Validade dos produtos (lista dos itens com plano de ação)', periodicity: 'SEMANAL' },
-    { description: 'SEMANAL: Estoque - Troca - Extrato de movimentação, acompanhamento junto ao Cleber', periodicity: 'SEMANAL' },
-    { description: 'SEMANAL: SEXTA 14:00h- Comercial - Lista de produtos com validade curta 7 dias (trabalhar com plano de ação, rebaixe de preço, exposição, cartazeamento, estoques)', periodicity: 'SEMANAL' },
-    { description: 'SEMANAL: Acompanhar o despacho de osso', periodicity: 'SEMANAL' },
-    { description: 'SEMANAL: Comercial (Levar sugestões de ofertas agressivas ao comercial, como itens próximo de vencimento, levantar as informações ao repassar aos setores)', periodicity: 'SEMANAL' },
-    { description: 'MENSAL: Reunião Gerente Geral com encarregados(as) e Subgerente', periodicity: 'MENSAL' },
-    { description: 'MENSAL: Reunião Encarregados(as) com a sua equipe (falar dos pontos do mês que passou e plano de ação para o mês seguinte)', periodicity: 'MENSAL' },
-    { description: 'MENSAL: Reunião Indicadores com Comercial (Gerente, Sub, RH e Comercial)', periodicity: 'MENSAL' },
-    { description: 'MENSAL: Perdas (top 5 perdas por setor e traçar plano de ação)', periodicity: 'MENSAL' },
-    { description: 'MENSAL: Divergências no recebimento (Entender o motivo para resolução)', periodicity: 'MENSAL' },
-    { description: 'MENSAL: Gerenciar produtos próximos do vencimento com exposição agressiva', periodicity: 'MENSAL' },
-    { description: 'MENSAL: Acompanhar cotações', periodicity: 'DIÁRIO' },
-    { description: 'MENSAL: Elaborar relatórios semanais das vendas das cotações', periodicity: 'MENSAL' },
-    { description: 'MENSAL: Perdas e itens sem giro (Reunião com Prevenção - plano de ação)', periodicity: 'MENSAL' },
-  ],
-  'SubGerente': [
-    { description: 'OPERAÇÃO: Acompanhar cotações', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Apresentação pessoal da equipe (uniformes, maquiagem, cabelos) e escalas', periodicity: 'DIÁRIO' },
-     { 
-      description: 'V.O. MANHÃ: Balcões de açougue (abastecimento, precificação, qualidade, limpeza)', 
-      periodicity: 'DIÁRIO',
-      subItems: ['LINGUIÇA', 'CARNE BOVINA', 'CARNE SUÍNA', 'CARNE AVES', 'PÃO DE ALHO'] 
-    },
-    { description: 'OPERAÇÃO: Balcões de padaria (abastecimento, precificação, qualidade, limpeza, equipamentos)', periodicity: 'DIÁRIO' },
-    { description: 'V.O. MANHÃ: Bebidas frias geladeiras abastecidas constantes', periodicity: 'DIÁRIO', 
-      subItems: ['GELADEIRAS FRENTE DE CAIXA', 'GELADEIRAS LINHA COCA-COLA', 'GELADEIRAS REFRIGERANTES/CERVEJAS'] 
-    },
-    { description: 'OPERAÇÃO: Cartazeamento dentro e fora da loja (Validade, descrição, local correto)', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Corredores da área de venda (está livre para que o cliente consiga passar com os carrinhos)', periodicity: 'DIÁRIO' },
-    { description: 'QUALIDADE: Depósito organizado e limpo', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Equipamentos em funcionamento (refrigerados, freezers, iluminação...)', periodicity: 'DIÁRIO' },
-    { description: 'QUALIDADE: Festivais - Exposição agressivo e cartazeamento (não deixar falta o item)', periodicity: 'DIÁRIO' },
-    { description: 'QUALIDADE: Hortifrutti (Qualidade, precificação, abastecimento, cartazeamento)', periodicity: 'DIÁRIO' },
-    { description: 'QUALIDADE: Limpeza e organização da frente de caixa', periodicity: 'DIÁRIO' },
-    { description: 'QUALIDADE: Limpeza e organization dos banheiros', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Ofertas diárias (Pegar o encarte de ofertas e ver como está a exposição, precificação)', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Ofertas do dia (abastecimento, precificação)', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Pontas de gôndulas (Abastecimento, troca de preços, cartazeamento, validade da ação) - sugerir troca', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Precificação (todos os produtos com a etiqueta de preço)', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: REPOSIÇÃO (área de venda sem buracos), ver produtos em falta na área de venda e repassar ao encarregado da reposição', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: QUINTA - Recolher lista de validades com encarregados dos setores', periodicity: 'SEMANAL' },
-    { description: 'PREVENÇÃO: Lista de produtos com validade curta 15 dias (trabalhar com rebaixe de preço, exposição, cartazeamento, estoques) ', periodicity: 'SEMANAL' },
-    { description: 'PREVENÇÃO: SEXTA 14:00h- Comercial - Lista de produtos com validade curta 7 dias (trabalhar com plano de ação, rebaixe de preço, exposição, cartazeamento, estoques)', periodicity: 'SEMANAL' },
-    { 
-      description: 'OPERAÇÃO: Balcão de frios', 
-      periodicity: 'DIÁRIO',
-      subItems: ['FATIADOS', 'QUEIJOS', 'MARGARINAS', 'EMBUTIDOS/MASSAS', 'GELADEIRAS/FREEZERS-SORVERTES'] 
-    },
-  ],
-  'FLV': [
-    { description: 'ABASTECIMENTO: Todas as bancas estão abastecidas?', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Todos os produtos possui etiquetas de preço?', periodicity: 'DIÁRIO' },
-    { description: 'RECEBIMENTO: No recebimento das mercadorias todos os produtos que são pesaveis foram pesados?', periodicity: 'DIÁRIO' },
-    { description: 'RECEBIMENTO: No recebimento das mercadorias durante a pesagem foi descontado a TARA das caixas?', periodicity: 'DIÁRIO' },
-    { description: 'RECEBIMENTO: No recebimento das mercadorias foi pesado fora das caixas de madeira ?', periodicity: 'DIÁRIO' },
-    { description: 'RECEBIMENTO: No recebimento das mercadorias foi constatado qualidade ruim? ', periodicity: 'DIÁRIO' },
-    { description: 'LIMPEZA: Limpeza e organização das cameras frias', periodicity: 'DIÁRIO' },
-    { description: 'LIMPEZA: Limpeza das bancas', periodicity: 'DIÁRIO' },
-    { description: 'LIMPEZA: Limpeza e organização da aréa de fracionamento dos produtos e seus utensilios', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Acompanhamento do descarte', periodicity: 'DIÁRIO' },
-    { description: 'VENDAS: Acompanhamento das vendas do setor, sendo do dia anterior versus a meta', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Acompanhamento das perdas do setor', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Acompanhamento do balanço nas quintas-feiras e análise das divergências', periodicity: 'SEMANAL' },
-    { description: 'OPERAÇÃO: Sugestão das compras, observando períodos do mês, garantindo os produtos disponíveis e evitando perdas', periodicity: 'SEMANAL' },
-    { description: 'OPERAÇÃO: Terça e Quarta: Preparation para o dia da feira, providenciando cartazeamento "TERÇA E QUARTA VERDE"', periodicity: 'SEMANAL' },
-    { description: 'OPERAÇÃO: Sexta: Definir os itens que entrará na agenda de ofertas, olhando margem, preço atual e preço sugerido', periodicity: 'SEMANAL' },
-    { description: 'GESTÃO: Foi realizado o envio da sugestão de ofertas para o Heitor?', periodicity: 'SEMANAL' },
-  ],
-  'Mercearia': [
-    { description: 'ABASTECIMENTO: Itens que acabaram de chegar já estão na área de venda?', periodicity: 'DIÁRIO' },
-    { description: 'PRECIFICAÇÃO: Verificação de todos os corredores da lista de alterados', periodicity: 'DIÁRIO' },
-    { description: 'DIA: Lista dos itens que acabou de chegar (Verificar se já está na área de venda)', periodicity: 'DIÁRIO' },
-    { description: 'PRECIFICAÇÃO: Todos os cartazes estão legíveis?', periodicity: 'DIÁRIO' },
-    { description: 'PRECIFICAÇÃO: Na área de venda possui rupturas? ', periodicity: 'DIÁRIO' },
-    { description: 'REPOSIÇÃO: Corredores e prateleiras limpos e organizados (paredão visual)', periodicity: 'DIÁRIO' },
-    { description: 'VALIDADE: Pegar a lista dos produtos próximo e vencimento e suas quantidades, para traçar plano de ação sendo exposição e preço agressivo, buscando venda rápida', periodicity: 'DIÁRIO' },
-    { description: 'GESTÃO: Distribuir tarefas entre repositores (foco em ofertas e tabloide)', periodicity: 'DIÁRIO' },
-    { description: 'GESTÃO: Corredores desobstruídos, passagem livre para clientes. Gondolas abastecidas, pontos extras abastecidos. Precificação. Cartaz.', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Itens sem venda está na área de venda?', periodicity: 'SEMANAL' },
-    { description: 'GESTÃO: Escalas de trabalho', periodicity: 'SEMANAL' },
-    { description: 'OPERAÇÃO: Acompanhar itens que mais vende e alinhar abastecimento, pontos extras', periodicity: 'SEMANAL' },
-    { description: 'OPERAÇÃO: Organizando junto aos respositores um uma BATIDA DE VALIDADE no seu setor, SENDO 2h por dia, para identificação de produtos vencidos ou próximo para fazer as devidas tratativas', periodicity: 'SEMANAL' },
-    { description: 'OPERAÇÃO: Analisar perdas (vencimento/avarias) - suporte do Cleber - SEMANAL', periodicity: 'SEMANAL' },
-    { description: 'GESTÃO: Acompanhar as vendas do setor versus a meta, traçar planos de ação para buscar o atingimento', periodicity: 'SEMANAL' },
-  ],
-  'FLC (Frios e Laticínios)': [
-    { description: 'OPERAÇÃO: Todas as geladeiras e área de venda estão abastecidas?', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: As geladeiras estão limpas?', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Todos os produtos possui etiquetas de preço?', periodicity: 'DIÁRIO' },
-    { description: 'LIMPEZA: Limpeza e organização das cameras frias?', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Acompanhamento do movimento dos retalhos dos queijos?', periodicity: 'DIÁRIO' },
-    { description: 'LIMPEZA: Limpeza e organização da aréa de manipulação de fatiados e seus utensilios?', periodicity: 'DIÁRIO' },
-    { description: 'VENDAS: Acompanhamento das vendas do setor, sendo do dia anterior versus a meta?', periodicity: 'DIÁRIO' },
-    { description: 'VENDAS: Verificação da lista de ofertas?', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Acompanhamento das perdas do setor?', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Acompanhamento do balanço e análise das divergências?', periodicity: 'SEMANAL' },
-    { description: 'OPERAÇÃO: Foi realizado a ronda de validade?', periodicity: 'SEMANAL' },
-    { description: 'GESTÃO: Foi programado as escalas de trabalho da equipe?', periodicity: 'SEMANAL' },
-    { description: 'GESTÃO: Quinta-feira - Entregar p/ Adriano lista dos produtos próximo do vencimento (proxima semana) e suas quantidades, para traçar plano de ação sendo exposição e preço agressivo, buscando venda rápida', periodicity: 'SEMANAL' },
-  ],
-  'Padaria-Confeitaria-Rotisseria': [
-    { description: 'ABASTECIMENTO: Vitrines de doces, salgados e balcões de pães abastecidos e organizados?', periodicity: 'DIÁRIO' },
-    { description: 'OPERAÇÃO: Todos os produtos fabricados possuem etiqueta de pesagem e validade interna correta?', periodicity: 'DIÁRIO' },
-    { description: 'ROTISSERIA: Balcão térmico ligado e temperatura conferida para o início do serviço?', periodicity: 'DIÁRIO' },
-    { description: 'LIMPEZA: Área de manipulação, formas, maquinários e utensílios limpos e higienizados?', periodicity: 'DIÁRIO' },
-    { description: 'VALIDADE: Ronda diária de insumos e matérias-primas na câmara fria e estoque do setor?', periodicity: 'DIÁRIO' },
-    { description: 'SEMANAL: Programação de produção para os itens de festival ou apostas do fim de semana?', periodicity: 'SEMANAL' }
-  ]
-};
-
-// 🚀 INJEÇÃO AUTOMÁTICA E MAPEAMENTO DE SETOR PARA O AMBIENTE DE TESTE
-TASK_DATA['TESTE_SISTEMA'] = [
-  ...TASK_DATA['TESTE_SISTEMA'].map((t: any) => ({ ...t, testSector: 'GERAL' })),
-  ...TASK_DATA['Gerente'].map((t: any) => ({ ...t, testSector: 'GERENTE' })),
-  ...TASK_DATA['SubGerente'].map((t: any) => ({ ...t, testSector: 'SUBGERENTE' })),
-  ...TASK_DATA['FLV'].map((t: any) => ({ ...t, testSector: 'FLV' })),
-  ...TASK_DATA['Mercearia'].map((t: any) => ({ ...t, testSector: 'MERCEARIA' })),
-  ...TASK_DATA['FLC (Frios e Laticínios)'].map((t: any) => ({ ...t, testSector: 'FLC' })),
-  ...TASK_DATA['Padaria-Confeitaria-Rotisseria'].map((t: any) => ({ ...t, testSector: 'PADARIA' }))
-];
 
 export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean }) {
   const router = useRouter();
@@ -362,18 +159,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (activeTop10Category === 'Rotisseria') currentList = [...top10Rotisseria];
     if (activeTop10Category === 'Confeitaria') currentList = [...top10Confeitaria];
 
-    if (currentList.length >= 10) {
-      return alert("LIMITE ATINGIDO! Você só pode selecionar 10 itens para a Curva A.");
-    }
-    if (currentList.find(i => i.id === item.id)) {
-      return alert("ESTE ITEM JÁ ESTÁ NA LISTA!");
-    }
+    if (currentList.length >= 10) return alert("LIMITE ATINGIDO! Você só pode selecionar 10 itens para a Curva A.");
+    if (currentList.find(i => i.id === item.id)) return alert("ESTE ITEM JÁ ESTÁ NA LISTA!");
     
-    const newItem = {
-      ...item,
-      statuses: { '10:00': null, '15:00': null },
-      photo: null
-    };
+    const newItem = { ...item, statuses: { '10:00': null, '15:00': null }, photo: null };
     currentList.push(newItem);
     saveTop10Local(activeTop10Category!, currentList);
   };
@@ -419,7 +208,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     const verificarHorario = () => {
       if (!department) return;
       const horaAtual = new Date().getHours();
-      if (department === 'SubGerente') {
+      // Não impõe horário para Compras e testes
+      if (department.includes('Compra') || department === 'TESTE_SISTEMA') {
+        setForaDoHorario(false);
+      } else if (department === 'SubGerente') {
         setForaDoHorario(horaAtual < 11 || horaAtual >= 21);
       } else if (['Gerente', 'FLV', 'Mercearia', 'FLC (Frios e Laticínios)', 'Padaria-Confeitaria-Rotisseria'].includes(department)) {
         setForaDoHorario(horaAtual < 7 || horaAtual >= 18);
@@ -510,8 +302,11 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       } else {
         const savedDept = authStatus.charAt(0).toUpperCase() + authStatus.slice(1);
         const match = SETORES_LISTA.find(s => s.toLowerCase() === authStatus.toLowerCase());
-        if (match || authStatus === 'gerente') {
-          setDepartment(match || 'Gerente');
+        if (match) {
+          setDepartment(match);
+          setIsAuthenticated(true);
+        } else if (authStatus === 'gerente') {
+          setDepartment('Gerente');
           setIsAuthenticated(true);
         }
       }
@@ -579,6 +374,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                 photos: [], 
                 frozen: false,
                 subStatuses: initialSubStatuses,
+                testSector: t.testSector,
                 created_at: new Date().toISOString() 
               };
             }));
@@ -625,12 +421,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     } catch (e) { console.error("Erro ao salvar no IndexedDB", e); }
   };
 
-  // 🚀 LÓGICA DE AUTO-FREEZE INTELIGENTE E BLINDADA
   const checkAutoFreeze = (currentIdx: number, currentTasks: any[]) => {
     return currentTasks.map((task, tIdx) => {
       if (tIdx !== currentIdx && !task.frozen && task.status !== 'Aguardando') {
         let isComplete = true;
-        
         if (task.subStatuses && Object.values(task.subStatuses).includes('Aguardando')) {
            isComplete = false;
         } else if (task.status === 'Não Conforme') {
@@ -638,11 +432,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
               isComplete = false;
            }
         }
-        // 🚀 OBRIGATORIEDADE DE FOTO PARA PADARIA EM CONFORME FOI REMOVIDA DAQUI!
-
-        if (isComplete) {
-           return { ...task, frozen: true };
-        }
+        if (isComplete) return { ...task, frozen: true };
       }
       return task;
     });
@@ -668,12 +458,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     const realIdx = tasks.indexOf(filteredTasks[idx]);
     if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
     let newTasks = [...tasks];
-    
     newTasks[realIdx].subStatuses[subItem] = newTasks[realIdx].subStatuses[subItem] === clickedStatus ? 'Aguardando' : clickedStatus;
     const statuses = Object.values(newTasks[realIdx].subStatuses);
     if (statuses.includes('Não Conforme')) { newTasks[realIdx].status = 'Não Conforme';
     } else if (statuses.includes('Aguardando')) { newTasks[realIdx].status = 'Aguardando'; } else { newTasks[realIdx].status = 'Conforme'; }
-    
     newTasks = checkAutoFreeze(realIdx, newTasks);
     saveState(newTasks);
   };
@@ -682,9 +470,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     const realIdx = tasks.indexOf(filteredTasks[idx]);
     if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
     let newTasks = [...tasks];
-    
     newTasks[realIdx].status = newTasks[realIdx].status === clickedStatus ? 'Aguardando' : clickedStatus;
-    
     newTasks = checkAutoFreeze(realIdx, newTasks);
     saveState(newTasks);
   };
@@ -694,7 +480,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
     let newTasks = [...tasks];
     newTasks[realIdx][field] = value;
-    
     newTasks = checkAutoFreeze(realIdx, newTasks);
     saveState(newTasks);
   };
@@ -705,7 +490,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     let newTasks = [...tasks];
     if (!newTasks[realIdx].photos) newTasks[realIdx].photos = [];
     newTasks[realIdx].photos.push(photoBase64);
-    
     newTasks = checkAutoFreeze(realIdx, newTasks);
     saveState(newTasks);
   };
@@ -715,7 +499,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (realIdx === -1 || tasks[realIdx].frozen || isLockedToday) return;
     let newTasks = [...tasks];
     newTasks[realIdx].photos.splice(photoIdx, 1);
-    
     newTasks = checkAutoFreeze(realIdx, newTasks);
     saveState(newTasks);
   };
@@ -724,34 +507,25 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     const realIdx = tasks.indexOf(filteredTasks[idx]);
     if (realIdx === -1) return;
     const task = tasks[realIdx];
-    
     if (task.subStatuses && Object.values(task.subStatuses).includes('Aguardando')) return alert("AVALIE TODOS OS BALCÕES ANTES DE FINALIZAR ESTA TAREFA!");
     if (task.status === 'Aguardando') return alert("SELECIONE O STATUS ANTES!");
-
     if (task.status === 'Não Conforme') {
         if (!task.photos || task.photos.length === 0) return alert("NÃO CONFORME EXIGE PELO MENOS UMA FOTO!");
         if (!task.observation || task.observation.trim().length < 15) return alert("A RÉPLICA PARA O RH ESTÁ MUITO CURTA! Detalhe melhor o problema (Mínimo 15 caracteres).");
     }
-    // 🚀 OBRIGATORIEDADE DE FOTO PARA PADARIA EM CONFORME FOI REMOVIDA DAQUI TAMBÉM!
-
     let newTasks = [...tasks];
     newTasks[realIdx].frozen = true;
-    
-    // Aproveita para tentar auto-finalizar as outras abertas e prontas
-    newTasks = checkAutoFreeze(-1, newTasks); // -1 força checagem em todas
-    
+    newTasks = checkAutoFreeze(-1, newTasks);
     saveState(newTasks);
   };
 
   const syncOfflineData = async () => {
     if (!navigator.onLine) return alert("📵 Você ainda está sem internet! Tente novamente quando houver sinal.");
-    
     if (isTeste) {
       await removeFromIndexedDB(`offline_sync_${department}`);
       setOfflineCount(0);
       return alert("🚀 TUDO SINCRONIZADO COM SUCESSO (AMBIENTE DE TESTE)!");
     }
-
     if (!supabase) return;
     setLoading(true);
     try {
@@ -797,26 +571,15 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (currentPeriodicity === 'TOP 10') {
       const todosTop10 = [...top10Padaria, ...top10Rotisseria, ...top10Confeitaria];
       if (todosTop10.length === 0) return alert("Adicione produtos ao TOP 10 antes de salvar!");
-      
       const faltamFotos = todosTop10.filter(item => !item.photo);
-      if (faltamFotos.length > 0) {
-          return alert(`⚠️ AÇÃO BLOQUEADA: Faltam fotos em ${faltamFotos.length} produto(s) do TOP 10! É obrigatório anexar foto para todos os itens da Curva A.`);
-      }
-
+      if (faltamFotos.length > 0) return alert(`⚠️ AÇÃO BLOQUEADA: Faltam fotos em ${faltamFotos.length} produto(s) do TOP 10! É obrigatório anexar foto para todos os itens da Curva A.`);
       const faltamStatus = todosTop10.filter(item => {
         if (!item.statuses) return true;
         const marcacoes = Object.values(item.statuses); 
         return marcacoes.every(val => val === null); 
       });
-
-      if (faltamStatus.length > 0) {
-        return alert(`⚠️ AÇÃO BLOQUEADA: Você esqueceu de marcar o status (Sim ou Não) em ${faltamStatus.length} produto(s) do TOP 10! Você precisa marcar pelo menos um horário antes de finalizar.`);
-      }
-
-      if (isTeste) {
-        return alert("✅ ACOMPANHAMENTO DO TOP 10 SALVO COM SUCESSO NO AMBIENTE DE TESTE!");
-      }
-      
+      if (faltamStatus.length > 0) return alert(`⚠️ AÇÃO BLOQUEADA: Você esqueceu de marcar o status (Sim ou Não) em ${faltamStatus.length} produto(s) do TOP 10! Você precisa marcar pelo menos um horário antes de finalizar.`);
+      if (isTeste) return alert("✅ ACOMPANHAMENTO DO TOP 10 SALVO COM SUCESSO NO AMBIENTE DE TESTE!");
       setLoading(true);
       try {
         const payloads = await Promise.all(todosTop10.map(async (t) => {
@@ -836,30 +599,19 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
           const statusText = t.statuses ? Object.entries(t.statuses).map(([time, val]) => `${time} (${val || 'Sem Registo'})`).join(' | ') : '';
           return { setor: department, tarefa: `TOP 10: ${t.name}`, status: 'Conforme', observacao: `Acompanhamento: ${statusText}`, foto_url: fotoUrlFinal, created_at: new Date().toISOString() };
         }));
-
         const { error } = await supabase.from('respostas').insert(payloads);
         if (error) throw error;
         alert("✅ ACOMPANHAMENTO DO TOP 10 SALVO COM SUCESSO NO SERVIDOR!");
-      } catch (error) {
-        alert("❌ ERRO AO SALVAR TOP 10 NO SERVIDOR.");
-      } finally {
-        setLoading(false);
-      }
+      } catch (error) { alert("❌ ERRO AO SALVAR TOP 10 NO SERVIDOR."); } finally { setLoading(false); }
       return;
     }
 
     const currentPeriodTasks = tasks.filter(t => t.periodicity === currentPeriodicity);
 
-    // 🚀 LÓGICA DE VALIDAÇÃO EXCLUSIVA PARA O MODO DE TESTES POR ABA
     if (isTeste && department === 'TESTE_SISTEMA') {
       const testSectorTasks = currentPeriodTasks.filter(t => t.testSector === activeTestSector || (!t.testSector && activeTestSector === 'GERAL'));
       const unfrozenTestTasks = testSectorTasks.filter(t => !t.frozen);
-
-      if (unfrozenTestTasks.length > 0) {
-          return alert(`FALTAM ${unfrozenTestTasks.length} TAREFAS PARA FINALIZAR A ABA ${activeTestSector}!`);
-      }
-
-      // Reseta apenas a aba atual testada para não travar o restante
+      if (unfrozenTestTasks.length > 0) return alert(`FALTAM ${unfrozenTestTasks.length} TAREFAS PARA FINALIZAR A ABA ${activeTestSector}!`);
       const resetTasks = tasks.map(t => {
           if (t.periodicity === currentPeriodicity && (t.testSector === activeTestSector || (!t.testSector && activeTestSector === 'GERAL'))) {
               return { ...t, status: 'Aguardando', observation: '', photos: [], frozen: false, subStatuses: t.subItems ? t.subItems.reduce((acc:any, i:string)=>({...acc, [i]: 'Aguardando'}), {}) : null };
@@ -870,7 +622,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       return alert(`🚀 MODO TESTE: SETOR ${activeTestSector} FINALIZADO COM SUCESSO!\n\nAs tarefas desta aba foram limpas para você continuar os testes.`);
     }
 
-    // 🚀 LÓGICA NORMAL DE PRODUÇÃO
     const unfrozenTasks = currentPeriodTasks.filter(t => !t.frozen);
     if (unfrozenTasks.length > 0) return alert(`FALTAM ${unfrozenTasks.length} TAREFAS PARA FINALIZAR NESTA AUDITORIA!`);
 
@@ -941,13 +692,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     } catch (err) { alert("ERRO DE CONEXÃO!"); } finally { setLoading(false); }
   };
 
-  // 🚀 LÓGICA DE FILTRAGEM DE TAREFAS E ABAS DO MODO TESTE
   let filteredTasks = tasks.filter(t => currentPeriodicity === 'PENDÊNCIAS' ? t.status === 'Não Conforme' : t.periodicity === currentPeriodicity);
-  
   if (department === 'TESTE_SISTEMA' && currentPeriodicity !== 'TOP 10' && currentPeriodicity !== 'PENDÊNCIAS') {
     filteredTasks = filteredTasks.filter(t => t.testSector === activeTestSector || (!t.testSector && activeTestSector === 'GERAL'));
   }
-
   const totalNCPendentes = tasks.filter(t => t.status === 'Não Conforme').length;
 
   const handleLogin = () => {
@@ -955,7 +703,8 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     const senhaCorreta = senhasBanco[department];
     if (
       (senhaCorreta && senhaCorreta === password) || 
-      (department === 'Padaria-Confeitaria-Rotisseria' && password === 'pcr123')
+      (department === 'Padaria-Confeitaria-Rotisseria' && password === 'pcr123') ||
+      (department.includes('Compra') && password === 'compras123') // 🚀 FACILITADOR PARA TESTAR AS COMPRAS
     ) {
       localStorage.setItem('user_auth', department.toLowerCase());
       setIsAuthenticated(true);
@@ -1094,16 +843,20 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
               <button onClick={() => { localStorage.removeItem('user_auth'); window.location.href = isTeste ? '/teste' : '/'; }} className="bg-slate-800 px-5 py-2 rounded-xl text-[10px] text-slate-400 hover:text-white transition-all font-black italic uppercase border border-slate-700 text-slate-300 font-black italic">Sair</button>
             </div>
           </div>
+          
+          {/* 🚀 MENUS DINÂMICOS COM A ABA "RELATÓRIOS" */}
           <div className="flex gap-2 bg-slate-800 p-2 rounded-2xl max-w-md mx-auto shadow-inner overflow-x-auto no-scrollbar font-black italic text-white font-black italic">
-            {['DIÁRIO', 'SEMANAL', 'MENSAL', 'PENDÊNCIAS', ...(department === 'Padaria-Confeitaria-Rotisseria' || department === 'TESTE_SISTEMA' ? ['TOP 10'] : [])].map(p => (
+            {['DIÁRIO', 'SEMANAL', 'MENSAL', 'PENDÊNCIAS', 
+               ...(department.includes('Compra') || department === 'TESTE_SISTEMA' ? ['RELATÓRIOS'] : []), 
+               ...(department === 'Padaria-Confeitaria-Rotisseria' || department === 'TESTE_SISTEMA' ? ['TOP 10'] : [])
+            ].map(p => (
               <button key={p} onClick={() => setCurrentPeriodicity(p)} className={`flex-1 min-w-[80px] py-3 text-[10px] rounded-xl transition-all font-black italic ${currentPeriodicity === p ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>{p}</button>
             ))}
           </div>
           
-          {/* 🚀 ABAS EXCLUSIVAS DO MODO DE TESTE */}
           {department === 'TESTE_SISTEMA' && currentPeriodicity !== 'TOP 10' && (
             <div className="mt-4 flex gap-2 bg-amber-500/20 p-2 rounded-2xl max-w-full overflow-x-auto no-scrollbar border border-amber-500/30">
-               {['GERAL', 'GERENTE', 'SUBGERENTE', 'FLV', 'MERCEARIA', 'FLC', 'PADARIA'].map(sec => (
+               {['GERAL', 'GERENTE', 'SUBGERENTE', 'FLV', 'MERCEARIA', 'FLC', 'PADARIA', 'COMPRAS 1', 'COMPRAS 2', 'ASSISTENTE COMPRAS'].map(sec => (
                   <button 
                     key={sec} 
                     onClick={() => setActiveTestSector(sec)} 
