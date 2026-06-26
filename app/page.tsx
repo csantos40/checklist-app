@@ -85,6 +85,20 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   const [isModalTop10Open, setIsModalTop10Open] = useState(false);
   const [activeTop10Category, setActiveTop10Category] = useState<'Padaria' | 'Rotisseria' | 'Confeitaria' | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // 🚀 ESTADO PARA O FORMULÁRIO DE ANÁLISE GC (COMPRAS 2)
+  const initialGCState = {
+    departamento: '',
+    categoriasDesenvolvidas: '',
+    categoriasPositivas: '',
+    categoriasNegativas: '',
+    categoriasMargemReduzida: '',
+    reducaoQuantidades: '',
+    reducaoValorVenda: '',
+    reducaoValorLucro: '',
+    reducaoMargem: ''
+  };
+  const [gcData, setGcData] = useState(initialGCState);
   
   // 🚀 ESTADO PARA O BOTÃO SECRETO E HORÁRIO
   const [clickCount, setClickCount] = useState(0);
@@ -92,7 +106,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
 
   useEffect(() => { setSuppressHydration(true); }, []);
 
-  // 🚀 CARREGAR TOP 10 DO LOCALSTORAGE
+  // 🚀 CARREGAR DADOS DO LOCALSTORAGE (TOP 10 e GC)
   useEffect(() => {
     if (department === 'Padaria-Confeitaria-Rotisseria' || department === 'TESTE_SISTEMA') {
       const savedPadaria = localStorage.getItem('top10_padaria');
@@ -102,7 +116,18 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       if (savedRotisseria) setTop10Rotisseria(JSON.parse(savedRotisseria));
       if (savedConfeitaria) setTop10Confeitaria(JSON.parse(savedConfeitaria));
     }
+    if (department === 'Compras 2' || department === 'TESTE_SISTEMA') {
+      const savedGC = localStorage.getItem('gc_analysis_data');
+      if (savedGC) setGcData(JSON.parse(savedGC));
+    }
   }, [department]);
+
+  // 🚀 SALVAR DADOS DO GC NO LOCALSTORAGE
+  const handleGcChange = (field: string, value: string) => {
+    const newData = { ...gcData, [field]: value };
+    setGcData(newData);
+    localStorage.setItem('gc_analysis_data', JSON.stringify(newData));
+  };
 
   // 🚀 SALVAR TOP 10 NO LOCALSTORAGE
   const saveTop10Local = (category: string, data: any[]) => {
@@ -302,11 +327,12 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       } else {
         const savedDept = authStatus.charAt(0).toUpperCase() + authStatus.slice(1);
         const match = SETORES_LISTA.find(s => s.toLowerCase() === authStatus.toLowerCase());
-        if (match) {
-          setDepartment(match);
+        const comprasMatch = SETORES_LISTA.find(s => s.toLowerCase() === authStatus.toLowerCase());
+        if (comprasMatch) {
+          setDepartment(comprasMatch);
           setIsAuthenticated(true);
-        } else if (authStatus === 'gerente') {
-          setDepartment('Gerente');
+        } else if (match || authStatus === 'gerente') {
+          setDepartment(match || 'Gerente');
           setIsAuthenticated(true);
         }
       }
@@ -428,7 +454,8 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         if (task.subStatuses && Object.values(task.subStatuses).includes('Aguardando')) {
            isComplete = false;
         } else if (task.status === 'Não Conforme') {
-           if (!task.photos || task.photos.length === 0 || !task.observation || task.observation.trim().length < 15) {
+           const isComprasTask = department.includes('Compra') || task.testSector?.includes('COMPRAS');
+           if ((!isComprasTask && (!task.photos || task.photos.length === 0)) || !task.observation || task.observation.trim().length < 15) {
               isComplete = false;
            }
         }
@@ -509,10 +536,14 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     const task = tasks[realIdx];
     if (task.subStatuses && Object.values(task.subStatuses).includes('Aguardando')) return alert("AVALIE TODOS OS BALCÕES ANTES DE FINALIZAR ESTA TAREFA!");
     if (task.status === 'Aguardando') return alert("SELECIONE O STATUS ANTES!");
+    
+    // 🚀 VALIDAÇÃO DO BOTÃO DE FINALIZAR ATUALIZADA
     if (task.status === 'Não Conforme') {
-        if (!task.photos || task.photos.length === 0) return alert("NÃO CONFORME EXIGE PELO MENOS UMA FOTO!");
+        const isComprasTask = department.includes('Compra') || task.testSector?.includes('COMPRAS');
+        if (!isComprasTask && (!task.photos || task.photos.length === 0)) return alert("NÃO CONFORME EXIGE PELO MENOS UMA FOTO!");
         if (!task.observation || task.observation.trim().length < 15) return alert("A RÉPLICA PARA O RH ESTÁ MUITO CURTA! Detalhe melhor o problema (Mínimo 15 caracteres).");
     }
+    
     let newTasks = [...tasks];
     newTasks[realIdx].frozen = true;
     newTasks = checkAutoFreeze(-1, newTasks);
@@ -567,6 +598,48 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   const submitChecklist = async () => {
     if (foraDoHorario) return alert("FORA DO HORÁRIO PERMITIDO PARA O SEU SETOR!");
     if (isLockedToday) return;
+
+    // 🚀 ENVIO DOS DADOS DA NOVA ABA DE ANÁLISE GC
+    if (currentPeriodicity === 'ANÁLISE GC') {
+      if (!gcData.departamento) return alert("Por favor, preencha o Nome do Departamento (Ex: Frios) antes de salvar!");
+      if (isTeste) return alert("✅ ANÁLISE GC SALVA COM SUCESSO NO AMBIENTE DE TESTE!");
+      
+      setLoading(true);
+      try {
+         const observacaoFormatada = `
+           Departamento: ${gcData.departamento} | 
+           Cat. Desenvolvidas: ${gcData.categoriasDesenvolvidas || '0'} | 
+           Cat. c/ Resultado Positivo: ${gcData.categoriasPositivas || '0'} | 
+           Cat. c/ Resultado Negativo: ${gcData.categoriasNegativas || '0'} | 
+           Cat. c/ Margem Reduzida: ${gcData.categoriasMargemReduzida || '0'} | 
+           Red. de quantidades: ${gcData.reducaoQuantidades || '0'} | 
+           Red. do valor de venda: ${gcData.reducaoValorVenda || '0'} | 
+           Red. do valor de lucro: ${gcData.reducaoValorLucro || '0'} | 
+           Red. de margem de contri: ${gcData.reducaoMargem || '0'}
+         `.replace(/\n/g, '').trim();
+
+         const payload = {
+           setor: department,
+           tarefa: `ANÁLISE GC DE PERFORMANCE - ${gcData.departamento}`,
+           status: 'Conforme',
+           observacao: observacaoFormatada,
+           foto_url: '',
+           created_at: new Date().toISOString()
+         };
+
+         const { error } = await supabase.from('respostas').insert([payload]);
+         if (error) throw error;
+
+         alert("✅ ANÁLISE GC SALVA COM SUCESSO!");
+         localStorage.removeItem('gc_analysis_data');
+         setGcData(initialGCState);
+      } catch (err) {
+         alert("❌ ERRO AO SALVAR ANÁLISE GC.");
+      } finally {
+         setLoading(false);
+      }
+      return;
+    }
 
     if (currentPeriodicity === 'TOP 10') {
       const todosTop10 = [...top10Padaria, ...top10Rotisseria, ...top10Confeitaria];
@@ -693,7 +766,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   };
 
   let filteredTasks = tasks.filter(t => currentPeriodicity === 'PENDÊNCIAS' ? t.status === 'Não Conforme' : t.periodicity === currentPeriodicity);
-  if (department === 'TESTE_SISTEMA' && currentPeriodicity !== 'TOP 10' && currentPeriodicity !== 'PENDÊNCIAS') {
+  if (department === 'TESTE_SISTEMA' && currentPeriodicity !== 'TOP 10' && currentPeriodicity !== 'PENDÊNCIAS' && currentPeriodicity !== 'ANÁLISE GC') {
     filteredTasks = filteredTasks.filter(t => t.testSector === activeTestSector || (!t.testSector && activeTestSector === 'GERAL'));
   }
   const totalNCPendentes = tasks.filter(t => t.status === 'Não Conforme').length;
@@ -844,17 +917,18 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
             </div>
           </div>
           
-          {/* 🚀 MENUS DINÂMICOS COM A ABA "RELATÓRIOS" */}
+          {/* 🚀 MENUS DINÂMICOS COM A NOVA ABA "ANÁLISE GC" */}
           <div className="flex gap-2 bg-slate-800 p-2 rounded-2xl max-w-md mx-auto shadow-inner overflow-x-auto no-scrollbar font-black italic text-white font-black italic">
             {['DIÁRIO', 'SEMANAL', 'MENSAL', 'PENDÊNCIAS', 
                ...(department.includes('Compra') || department === 'TESTE_SISTEMA' ? ['RELATÓRIOS'] : []), 
+               ...(department === 'Compras 2' || department === 'TESTE_SISTEMA' ? ['ANÁLISE GC'] : []), 
                ...(department === 'Padaria-Confeitaria-Rotisseria' || department === 'TESTE_SISTEMA' ? ['TOP 10'] : [])
             ].map(p => (
               <button key={p} onClick={() => setCurrentPeriodicity(p)} className={`flex-1 min-w-[80px] py-3 text-[10px] rounded-xl transition-all font-black italic ${currentPeriodicity === p ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>{p}</button>
             ))}
           </div>
           
-          {department === 'TESTE_SISTEMA' && currentPeriodicity !== 'TOP 10' && (
+          {department === 'TESTE_SISTEMA' && currentPeriodicity !== 'TOP 10' && currentPeriodicity !== 'ANÁLISE GC' && (
             <div className="mt-4 flex gap-2 bg-amber-500/20 p-2 rounded-2xl max-w-full overflow-x-auto no-scrollbar border border-amber-500/30">
                {['GERAL', 'GERENTE', 'SUBGERENTE', 'FLV', 'MERCEARIA', 'FLC', 'PADARIA', 'COMPRAS 1', 'COMPRAS 2', 'ASSISTENTE COMPRAS'].map(sec => (
                   <button 
@@ -883,6 +957,64 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                <div className="text-6xl mb-4 font-black italic">⏰</div>
                <h2 className="text-2xl italic uppercase font-black text-slate-900 font-black italic">FORA DO HORÁRIO</h2>
                <p className="text-slate-400 text-sm mt-2 font-bold uppercase italic font-black italic">SEU SETOR RESPONDE DAS {department === 'SubGerente' ? '11H ÀS 21H' : '07H ÀS 18H'}.</p>
+            </div>
+          ) : currentPeriodicity === 'ANÁLISE GC' ? (
+            <div className="space-y-6 animate-in fade-in duration-300">
+               <div className="text-center mb-6">
+                 <h2 className="text-3xl text-indigo-700 font-black uppercase italic">📊 ANÁLISE DE PERFORMANCE GC</h2>
+                 <p className="text-xs text-slate-400 font-bold uppercase italic mt-2">Preencha os indicadores da análise diária</p>
+               </div>
+               
+               <div className="bg-white p-6 rounded-[2.5rem] border-2 border-indigo-100 shadow-sm space-y-6">
+                 
+                 <div className="w-full">
+                    <label className="text-[10px] text-indigo-800 font-black uppercase italic ml-2">NOME DO DEPARTAMENTO DA GC</label>
+                    <input type="text" placeholder="EX: FRIOS" className="w-full p-4 mt-2 rounded-xl border-2 border-slate-200 text-slate-900 font-bold uppercase outline-none focus:border-indigo-500 transition-all" value={gcData.departamento} onChange={(e) => handleGcChange('departamento', e.target.value)} />
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                   {/* COLUNA ESQUERDA - CATEGORIAS */}
+                   <div className="space-y-4">
+                      <div>
+                        <label className="text-[10px] text-slate-600 font-black uppercase italic ml-2">Categorias Desenvolvidas</label>
+                        <input type="text" placeholder="Ex: 0" className="w-full p-4 mt-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500" value={gcData.categoriasDesenvolvidas} onChange={(e) => handleGcChange('categoriasDesenvolvidas', e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-600 font-black uppercase italic ml-2">Categorias com Resultado Positivo</label>
+                        <input type="text" placeholder="Ex: 0 - 0%" className="w-full p-4 mt-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500" value={gcData.categoriasPositivas} onChange={(e) => handleGcChange('categoriasPositivas', e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-600 font-black uppercase italic ml-2">Categorias com Resultado Negativo</label>
+                        <input type="text" placeholder="Ex: 0 - 0%" className="w-full p-4 mt-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500" value={gcData.categoriasNegativas} onChange={(e) => handleGcChange('categoriasNegativas', e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-600 font-black uppercase italic ml-2">Categorias com Margem Reduzida</label>
+                        <input type="text" placeholder="Ex: 0" className="w-full p-4 mt-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-bold outline-none focus:border-indigo-500" value={gcData.categoriasMargemReduzida} onChange={(e) => handleGcChange('categoriasMargemReduzida', e.target.value)} />
+                      </div>
+                   </div>
+
+                   {/* COLUNA DIREITA - REDUÇÕES */}
+                   <div className="space-y-4">
+                      <div>
+                        <label className="text-[10px] text-red-600 font-black uppercase italic ml-2">Redução de quantidades vendidas</label>
+                        <input type="text" placeholder="Ex: 0 - 0%" className="w-full p-4 mt-1 rounded-xl bg-red-50 border border-red-200 text-red-900 font-bold outline-none focus:border-red-500" value={gcData.reducaoQuantidades} onChange={(e) => handleGcChange('reducaoQuantidades', e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-red-600 font-black uppercase italic ml-2">Redução do valor de venda</label>
+                        <input type="text" placeholder="Ex: R$ 0,00 - 0%" className="w-full p-4 mt-1 rounded-xl bg-red-50 border border-red-200 text-red-900 font-bold outline-none focus:border-red-500" value={gcData.reducaoValorVenda} onChange={(e) => handleGcChange('reducaoValorVenda', e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-red-600 font-black uppercase italic ml-2">Redução do valor do lucro</label>
+                        <input type="text" placeholder="Ex: R$ 0,00 - 0%" className="w-full p-4 mt-1 rounded-xl bg-red-50 border border-red-200 text-red-900 font-bold outline-none focus:border-red-500" value={gcData.reducaoValorLucro} onChange={(e) => handleGcChange('reducaoValorLucro', e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-red-600 font-black uppercase italic ml-2">Redução de margem de contribuição</label>
+                        <input type="text" placeholder="Ex: 0% - 0%" className="w-full p-4 mt-1 rounded-xl bg-red-50 border border-red-200 text-red-900 font-bold outline-none focus:border-red-500" value={gcData.reducaoMargem} onChange={(e) => handleGcChange('reducaoMargem', e.target.value)} />
+                      </div>
+                   </div>
+                 </div>
+
+               </div>
             </div>
           ) : currentPeriodicity === 'TOP 10' ? (
             <div className="space-y-8 animate-in fade-in duration-300">
@@ -1035,6 +1167,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
           ) : (
             filteredTasks.map((task, idx) => {
               const diasSLA = calcularSLA(task.created_at);
+              
+              // 🚀 VERIFICAÇÃO SE A TAREFA ATUAL É DE COMPRAS
+              const isComprasTask = department.includes('Compra') || task.testSector?.includes('COMPRAS');
+
               return (
                 <div key={idx} className={`p-6 rounded-[2.5rem] border-2 transition-all relative font-black italic ${task.frozen ? 'opacity-50 grayscale bg-slate-100 border-slate-200 text-slate-900 font-black italic' : task.status === 'Não Conforme' ? 'border-amber-400 bg-amber-50/50 text-slate-900 font-black italic' : task.status === 'Conforme' ? 'border-green-400 bg-green-50/30 text-slate-900 font-black italic' : 'border-slate-100 bg-slate-50 text-slate-900 font-black italic'}`}>
                   {task.frozen && <div className="absolute top-4 right-6 text-xl font-black italic">🔒</div>}
@@ -1075,7 +1211,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                     {task.status !== 'Aguardando' && currentPeriodicity !== 'PENDÊNCIAS' && (
                       <div className="space-y-4 pt-4 border-t border-slate-200 font-black italic">
                         
-                        {/* 🚀 EXIBIR CÂMERA E TEXTO SOMENTE SE FOR "NÃO CONFORME" */}
+                        {/* 🚀 EXIBIR TEXTO SE FOR "NÃO CONFORME" */}
                         {task.status === 'Não Conforme' && (
                           <>
                             <div className="bg-amber-100 p-5 rounded-[2rem] border-2 border-amber-300 w-full mb-2">
@@ -1083,35 +1219,39 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                               <textarea disabled={task.frozen} placeholder="Explique detalhadamente o motivo para o RH..." className="w-full p-4 rounded-2xl border border-amber-300 text-black font-bold outline-none text-sm uppercase italic shadow-inner bg-white min-h-[80px]" value={task.observation} onChange={(e) => updateTaskData(idx, 'observation', e.target.value)} />
                               {!task.frozen && <p className={`text-[8px] text-right mt-2 uppercase font-black ${task.observation?.length >= 15 ? 'text-green-600' : 'text-red-500'}`}>{task.observation?.length || 0}/15 CARACTERES EXIGIDOS</p>}
                             </div>
-                            <div className="flex flex-wrap gap-3 items-center font-black italic">
-                              {task.photos?.map((p: string, pIdx: number) => (
-                                  <div key={pIdx} className="w-16 h-16 rounded-xl border-2 border-amber-300 overflow-hidden shadow-sm relative font-black italic">
-                                      <img src={p} alt="Anexo Auditoria" className="w-full h-full object-cover font-black italic" />
-                                      {!task.frozen && <button onClick={() => handleRemovePhoto(idx, pIdx)} className="absolute top-0 right-0 bg-red-600 text-white w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded-bl-lg shadow-md text-white font-black font-black italic">X</button>}
-                                  </div>
-                              ))}
-                              {!task.frozen && (
-                                  <label className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-600 text-white text-xl cursor-pointer shadow-md active:scale-95 transition-all border-2 border-white text-white font-black font-black italic">
-                                    +
-                                    <input type="file" accept="image/*" capture="environment" className="hidden font-black italic" onChange={async (e: any) => {
-                                      const file = e.target.files[0];
-                                      if (!file) return;
-                                      try {
-                                        const imageCompression = (await import('browser-image-compression')).default;
-                                        const options = { maxSizeMB: 0.2, maxWidthOrHeight: 1024, useWebWorker: true };
-                                        const compressedFile = await imageCompression(file, options);
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => handleAddPhoto(idx, reader.result);
-                                        reader.readAsDataURL(compressedFile);
-                                      } catch (error) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => handleAddPhoto(idx, reader.result);
-                                        reader.readAsDataURL(file);
-                                      }
-                                    }} />
-                                  </label>
-                              )}
-                            </div>
+                            
+                            {/* 🚀 CÂMERA TOTALMENTE OCULTA PARA OS SETORES DE COMPRAS (Mesmo no modo teste) */}
+                            {!isComprasTask && (
+                              <div className="flex flex-wrap gap-3 items-center font-black italic">
+                                {task.photos?.map((p: string, pIdx: number) => (
+                                    <div key={pIdx} className="w-16 h-16 rounded-xl border-2 border-amber-300 overflow-hidden shadow-sm relative font-black italic">
+                                        <img src={p} alt="Anexo Auditoria" className="w-full h-full object-cover font-black italic" />
+                                        {!task.frozen && <button onClick={() => handleRemovePhoto(idx, pIdx)} className="absolute top-0 right-0 bg-red-600 text-white w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded-bl-lg shadow-md text-white font-black font-black italic">X</button>}
+                                    </div>
+                                ))}
+                                {!task.frozen && (
+                                    <label className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-600 text-white text-xl cursor-pointer shadow-md active:scale-95 transition-all border-2 border-white text-white font-black font-black italic">
+                                      +
+                                      <input type="file" accept="image/*" capture="environment" className="hidden font-black italic" onChange={async (e: any) => {
+                                        const file = e.target.files[0];
+                                        if (!file) return;
+                                        try {
+                                          const imageCompression = (await import('browser-image-compression')).default;
+                                          const options = { maxSizeMB: 0.2, maxWidthOrHeight: 1024, useWebWorker: true };
+                                          const compressedFile = await imageCompression(file, options);
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => handleAddPhoto(idx, reader.result);
+                                          reader.readAsDataURL(compressedFile);
+                                        } catch (error) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => handleAddPhoto(idx, reader.result);
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }} />
+                                    </label>
+                                )}
+                              </div>
+                            )}
                           </>
                         )}
 
@@ -1191,7 +1331,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         {!isLockedToday && !foraDoHorario && currentPeriodicity !== 'PENDÊNCIAS' && (
           <footer className="p-8 bg-slate-50 text-center border-t border-slate-200 rounded-b-[3.5rem] font-black italic">
             <button onClick={submitChecklist} disabled={loading} className={`w-full py-7 rounded-[2.5rem] shadow-xl text-xl transition-all active:scale-95 font-black italic uppercase border-b-8 font-black italic ${loading ? 'bg-slate-400 border-slate-500 font-black italic' : 'bg-black text-white border-slate-800 hover:bg-slate-900 font-black italic'} text-white font-black italic`}>
-              {loading ? 'SINCRONIZANDO...' : currentPeriodicity === 'TOP 10' ? 'SALVAR ACOMPANHAMENTO TOP 10' : (isTeste && department === 'TESTE_SISTEMA') ? `FINALIZAR SETOR: ${activeTestSector}` : `FINALIZAR AUDITORIA`}
+              {loading ? 'SINCRONIZANDO...' : currentPeriodicity === 'TOP 10' ? 'SALVAR ACOMPANHAMENTO TOP 10' : currentPeriodicity === 'ANÁLISE GC' ? 'SALVAR ANÁLISE GC' : (isTeste && department === 'TESTE_SISTEMA') ? `FINALIZAR SETOR: ${activeTestSector}` : `FINALIZAR AUDITORIA`}
             </button>
           </footer>
         )}
