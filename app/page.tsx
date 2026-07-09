@@ -89,6 +89,8 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   // 🚀 ESTADO PARA O FORMULÁRIO DE ANÁLISE GC (COMPRAS 2)
   const initialGCState = {
     departamento: '',
+    dataInicio: '', // 🚀 NOVO CAMPO: DATA INÍCIO DO PERÍODO
+    dataFim: '',    // 🚀 NOVO CAMPO: DATA FIM DO PERÍODO
     categoriasDesenvolvidas: '',
     categoriasPositivas: '',
     categoriasNegativas: '',
@@ -599,7 +601,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (foraDoHorario) return alert("FORA DO HORÁRIO PERMITIDO PARA O SEU SETOR!");
     if (isLockedToday) return;
 
-    // 🚀 ENVIO DOS DADOS DA NOVA ABA DE ANÁLISE GC
+    // 🚀 ENVIO DOS DADOS DA NOVA ABA DE ANÁLISE GC ATUALIZADA (COM PERÍODO DE DATAS)
     if (currentPeriodicity === 'ANÁLISE GC') {
       if (!gcData.departamento) return alert("Por favor, preencha o Nome do Departamento (Ex: Frios) antes de salvar!");
       if (isTeste) return alert("✅ ANÁLISE GC SALVA COM SUCESSO NO AMBIENTE DE TESTE!");
@@ -608,6 +610,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       try {
          const observacaoFormatada = `
            Departamento: ${gcData.departamento} | 
+           Período: ${gcData.dataInicio ? gcData.dataInicio.split('-').reverse().join('/') : '?'} a ${gcData.dataFim ? gcData.dataFim.split('-').reverse().join('/') : '?'} | 
            Cat. Desenvolvidas: ${gcData.categoriasDesenvolvidas || '0'} | 
            Cat. c/ Resultado Positivo: ${gcData.categoriasPositivas || '0'} | 
            Cat. c/ Resultado Negativo: ${gcData.categoriasNegativas || '0'} | 
@@ -962,14 +965,27 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
             <div className="space-y-6 animate-in fade-in duration-300">
                <div className="text-center mb-6">
                  <h2 className="text-3xl text-indigo-700 font-black uppercase italic">📊 ANÁLISE DE PERFORMANCE GC</h2>
-                 <p className="text-xs text-slate-400 font-bold uppercase italic mt-2">Preencha os indicadores da análise diária</p>
+                 <p className="text-xs text-slate-400 font-bold uppercase italic mt-2">Preencha os indicadores da análise</p>
                </div>
                
                <div className="bg-white p-6 rounded-[2.5rem] border-2 border-indigo-100 shadow-sm space-y-6">
                  
-                 <div className="w-full">
-                    <label className="text-[10px] text-indigo-800 font-black uppercase italic ml-2">NOME DO DEPARTAMENTO DA GC</label>
-                    <input type="text" placeholder="EX: FRIOS" className="w-full p-4 mt-2 rounded-xl border-2 border-slate-200 text-slate-900 font-bold uppercase outline-none focus:border-indigo-500 transition-all" value={gcData.departamento} onChange={(e) => handleGcChange('departamento', e.target.value)} />
+                 {/* LINHA 1: DEPARTAMENTO E PERÍODO */}
+                 <div className="flex flex-col md:flex-row gap-4 w-full">
+                    <div className="flex-1">
+                        <label className="text-[10px] text-indigo-800 font-black uppercase italic ml-2">NOME DO DEPARTAMENTO DA GC</label>
+                        <input type="text" placeholder="EX: FRIOS" className="w-full p-4 mt-2 rounded-xl border-2 border-slate-200 text-slate-900 font-bold uppercase outline-none focus:border-indigo-500 transition-all" value={gcData.departamento} onChange={(e) => handleGcChange('departamento', e.target.value)} />
+                    </div>
+                    <div className="flex-1 flex gap-2">
+                        <div className="w-1/2">
+                            <label className="text-[10px] text-indigo-800 font-black uppercase italic ml-2">DATA INÍCIO</label>
+                            <input type="date" className="w-full p-4 mt-2 rounded-xl border-2 border-slate-200 text-slate-900 font-bold uppercase outline-none focus:border-indigo-500 transition-all" value={gcData.dataInicio} onChange={(e) => handleGcChange('dataInicio', e.target.value)} />
+                        </div>
+                        <div className="w-1/2">
+                            <label className="text-[10px] text-indigo-800 font-black uppercase italic ml-2">DATA FIM</label>
+                            <input type="date" className="w-full p-4 mt-2 rounded-xl border-2 border-slate-200 text-slate-900 font-bold uppercase outline-none focus:border-indigo-500 transition-all" value={gcData.dataFim} onChange={(e) => handleGcChange('dataFim', e.target.value)} />
+                        </div>
+                    </div>
                  </div>
 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
@@ -1221,7 +1237,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                             </div>
                             
                             {/* 🚀 CÂMERA TOTALMENTE OCULTA PARA OS SETORES DE COMPRAS (Mesmo no modo teste) */}
-                            {!isComprasTask && (
+                            {(!isComprasTask) && (
                               <div className="flex flex-wrap gap-3 items-center font-black italic">
                                 {task.photos?.map((p: string, pIdx: number) => (
                                     <div key={pIdx} className="w-16 h-16 rounded-xl border-2 border-amber-300 overflow-hidden shadow-sm relative font-black italic">
