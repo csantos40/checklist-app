@@ -89,8 +89,8 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
   // 🚀 ESTADO PARA O FORMULÁRIO DE ANÁLISE GC (COMPRAS 2)
   const initialGCState = {
     departamento: '',
-    dataInicio: '', // 🚀 NOVO CAMPO: DATA INÍCIO DO PERÍODO
-    dataFim: '',    // 🚀 NOVO CAMPO: DATA FIM DO PERÍODO
+    dataInicio: '', 
+    dataFim: '',    
     categoriasDesenvolvidas: '',
     categoriasPositivas: '',
     categoriasNegativas: '',
@@ -413,10 +413,19 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     }
   }, [isAuthenticated, department]);
 
+  // 🚀 OTIMIZAÇÃO DE PERFORMANCE: LIMITAR PENDÊNCIAS EM 50
   useEffect(() => {
     async function puxarPendenciasReais() {
       if (!supabase || !department || currentPeriodicity !== 'PENDÊNCIAS') return;
-      const { data } = await supabase.from('respostas').select('*').eq('setor', department).eq('status', 'Não Conforme');
+      
+      const { data } = await supabase
+        .from('respostas')
+        .select('*')
+        .eq('setor', department)
+        .eq('status', 'Não Conforme')
+        .order('created_at', { ascending: false }) 
+        .limit(50); 
+        
       if (data) {
         const pendenciasFormatadas = data.map((p: any) => ({
           description: p.tarefa,
@@ -798,8 +807,8 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         <div className="min-h-screen bg-amber-500 flex items-center justify-center p-4 italic font-black text-slate-900 uppercase text-center">
           <div className="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl border-t-8 border-slate-900 text-slate-900">
             <div className="mb-10 flex flex-col items-center text-slate-900 font-black italic">
-               <div className="h-24 mb-6 cursor-pointer" onClick={handleSecretReset}>
-                 <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-slate-900 font-black italic" />
+               <div className="h-24 mb-6 cursor-pointer flex justify-center" onClick={handleSecretReset}>
+                 <img src="/logo.png" alt="Logo Check Store" className="h-full w-auto object-contain" />
                </div>
                <h1 className="text-4xl tracking-tighter italic uppercase text-slate-900 font-black italic">MODO TESTE 🛠️</h1>
             </div>
@@ -844,10 +853,10 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 italic font-black text-slate-900 uppercase text-center">
         <div className="bg-white w-full max-w-md p-10 rounded-[3rem] shadow-2xl border-t-8 border-indigo-600 text-slate-900">
           <div className="mb-10 flex flex-col items-center text-slate-900 font-black italic">
-             <div className="h-24 mb-6 cursor-pointer" onClick={handleSecretReset}>
-                <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-slate-900 font-black italic" />
+             <div className="h-24 mb-6 cursor-pointer flex justify-center" onClick={handleSecretReset}>
+                <img src="/logo.png" alt="Logo Check Store" className="h-full w-auto object-contain" />
             </div>
-             <h1 className="text-4xl tracking-tighter italic uppercase text-slate-900 font-black italic">ACESSO VIVIAN</h1>
+             <h1 className="text-4xl tracking-tighter italic uppercase text-slate-900 font-black italic">ACESSO CHECK STORE</h1>
           </div>
           <div className="space-y-6 text-slate-900 font-black italic">
             <select className="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold uppercase text-slate-900 font-black italic" value={department} onChange={(e) => setDepartment(e.target.value)}>
@@ -893,13 +902,13 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         <header className="bg-slate-900 p-6 md:p-8 text-white border-b border-slate-800 font-black italic">
           <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6 text-white font-black italic">
             <div className="flex items-center gap-4 h-12 text-white font-black italic">
-              <div className="h-full cursor-pointer" onClick={handleSecretReset}>
-                <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain text-white font-black italic" />
+              <div className="h-full cursor-pointer flex items-center" onClick={handleSecretReset}>
+                <img src="/logo.png" alt="Logo Check Store" className="h-full w-auto object-contain" />
               </div>
               <div className="text-left leading-none border-l-2 border-indigo-500 pl-3 text-white font-black italic">
                 <h1 className="text-xl tracking-tighter font-black italic text-white font-black italic">{department}</h1>
                 <p className={`text-[8px] tracking-widest mt-1 font-black italic uppercase text-white font-black italic ${isTeste ? 'text-amber-400' : 'text-indigo-400'}`}>
-                  {isTeste ? 'AMBIENTE DE TESTE' : 'SISTEMA VIVIAN'}
+                  {isTeste ? 'AMBIENTE DE TESTE' : 'SISTEMA CHECK STORE'}
                 </p>
               </div>
             </div>

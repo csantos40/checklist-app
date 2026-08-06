@@ -14,6 +14,9 @@ export default function DashboardDefinitiva() {
   const [endDate, setEndDate] = useState(''); 
   const [selectedTask, setSelectedTask] = useState(null);
   
+  // 🚀 ESTADO PARA CONTROLAR A QUANTIDADE DE TAREFAS NA TELA (PAGINAÇÃO VIRTUAL)
+  const [visibleCount, setVisibleCount] = useState(50);
+  
   // 🚀 NOVOS ESTADOS PARA A CAIXA DE OBSERVAÇÃO COMPARTILHADA
   const [comentarioGestao, setComentarioGestao] = useState('');
   const [salvandoComentario, setSalvandoComentario] = useState(false);
@@ -49,7 +52,8 @@ export default function DashboardDefinitiva() {
         .from('respostas')
         .select('*')
         .neq('setor', 'TESTE_SISTEMA')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(3000); 
       setReports(data || []);
     } catch (err) { console.error("Erro ao buscar dados:", err); } finally { setLoading(false); }
   };
@@ -76,6 +80,11 @@ export default function DashboardDefinitiva() {
     };
   }, [supabase, authorized]);
 
+  // 🚀 ZERA A PAGINAÇÃO SEMPRE QUE O USUÁRIO MEXER NOS FILTROS
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [selectedSector, statusFilter, startDate, endDate]);
+
   // 🚀 CARREGA O COMENTÁRIO DO BANCO DE DADOS QUANDO ABRIR A TAREFA
   useEffect(() => {
     if (selectedTask) {
@@ -98,7 +107,6 @@ export default function DashboardDefinitiva() {
 
       if (error) throw error;
       
-      // Atualiza a tela imediatamente para não precisar recarregar
       const updatedReports: any = reports.map((r: any) => 
         r.created_at === (selectedTask as any).created_at && r.tarefa === (selectedTask as any).tarefa 
           ? { ...r, comentario_gestao: comentarioGestao } 
@@ -123,7 +131,6 @@ export default function DashboardDefinitiva() {
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  // 🚀 LÓGICA DO RADAR DO RH (Cálculo de Inadimplência)
   const calcularDiasSemPreencher = (dataIso: string | null) => {
     if (!dataIso) return Infinity;
     const hoje = new Date();
@@ -155,11 +162,11 @@ export default function DashboardDefinitiva() {
     else window.location.href = '/gestao';
   };
 
-  const filteredReports = reports.filter((r: any) => {
+  // 🚀 PASSO 1: FILTRO BASE (Apenas Data e Setor) para os indicadores não sumirem
+  const baseReports = reports.filter((r: any) => {
     const matchSector = selectedSector === 'TODOS' || r.setor === selectedSector;
-    const matchStatus = statusFilter === 'TODOS' || r.status === statusFilter;
-    
     let matchDate = true;
+    
     if (startDate || endDate) {
       const reportDate = new Date(r.created_at).toLocaleDateString('en-CA');
       if (startDate && endDate) {
@@ -170,14 +177,22 @@ export default function DashboardDefinitiva() {
         matchDate = reportDate <= endDate;
       }
     }
-    
-    return matchSector && matchStatus && matchDate;
+    return matchSector && matchDate;
   });
 
-  const conformesCount = filteredReports.filter((r: any) => r.status === 'Conforme').length;
-  const naoConformesCount = filteredReports.filter((r: any) => r.status === 'Não Conforme').length;
-  const totalNoFiltro = filteredReports.length;
-  const score = totalNoFiltro > 0 ? ((conformesCount / totalNoFiltro) * 100).toFixed(0) : 0;
+  // 🚀 PASSO 2: CONTADORES FIXOS BASEADOS NO FILTRO DE DATA/SETOR
+  const conformesCount = baseReports.filter((r: any) => r.status === 'Conforme').length;
+  const naoConformesCount = baseReports.filter((r: any) => r.status === 'Não Conforme').length;
+  const totalNoFiltro = baseReports.length;
+  
+  // Otimização: casas decimais exatas (ex: 99.9%)
+  const percentConforme = totalNoFiltro > 0 ? parseFloat(((conformesCount / totalNoFiltro) * 100).toFixed(1)) : 0;
+  const percentNaoConforme = totalNoFiltro > 0 ? parseFloat(((naoConformesCount / totalNoFiltro) * 100).toFixed(1)) : 0;
+
+  // 🚀 PASSO 3: FILTRO FINAL (Aplica o botão de status clicado para mostrar na tela)
+  const displayReports = baseReports.filter((r: any) => {
+    return statusFilter === 'TODOS' || r.status === statusFilter;
+  });
 
   if (!authorized) return null;
 
@@ -201,7 +216,7 @@ export default function DashboardDefinitiva() {
             <h1 className="text-2xl tracking-tighter italic uppercase text-[#1E293B]">DASHBOARD CENTRAL</h1>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="flex flex-wrap justify-center items-center gap-2">
              <div className="flex flex-col items-center">
                 <p className="text-[7px] mb-1 text-slate-400">DATA INICIAL</p>
                 <input 
@@ -230,9 +245,20 @@ export default function DashboardDefinitiva() {
                 <p className="text-[7px]">PENDÊNCIAS</p>
                 <p className="text-xl">{naoConformesCount}</p>
              </button>
-             <div className="bg-[#0F172A] px-6 py-2 rounded-xl text-white shadow-lg text-center min-w-[120px] flex flex-col justify-center">
-                <p className="text-[7px] text-indigo-400 uppercase">SCORE PERÍODO</p>
-                <p className="text-2xl">{score}%</p>
+             
+             <div className="bg-[#0F172A] px-4 py-2 rounded-xl text-white shadow-lg text-center min-w-[140px] flex flex-col justify-center border border-slate-700">
+                <p className="text-[7px] text-indigo-400 uppercase mb-1">SAÚDE DA LOJA</p>
+                <div className="flex gap-3 justify-center items-center">
+                  <div className="flex flex-col items-center">
+                     <p className="text-xl text-green-400 leading-none">{percentConforme}%</p>
+                     <p className="text-[6px] text-slate-300 mt-1">OK</p>
+                  </div>
+                  <div className="w-[1px] h-6 bg-slate-700"></div>
+                  <div className="flex flex-col items-center">
+                     <p className="text-xl text-red-400 leading-none">{percentNaoConforme}%</p>
+                     <p className="text-[6px] text-slate-300 mt-1">N.C.</p>
+                  </div>
+                </div>
              </div>
           </div>
 
@@ -245,7 +271,6 @@ export default function DashboardDefinitiva() {
           </div>
         </header>
 
-        {/* 🚀 RADAR DO RH - ALERTA DE INADIMPLÊNCIA */}
         {setoresAtrasados.length > 0 && (
           <div className="bg-red-50 border-2 border-red-500 rounded-[2rem] p-6 shadow-sm no-print mb-6">
             <div className="flex items-center gap-3 mb-4">
@@ -282,7 +307,7 @@ export default function DashboardDefinitiva() {
         </div>
 
         <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredReports.map((item: any, idx: number) => {
+          {displayReports.slice(0, visibleCount).map((item: any, idx: number) => {
             const diasAtraso = calcularSLA(item.created_at);
             const fotos = item.foto_url ? String(item.foto_url).split(',').filter((f: any) => f.trim().length > 5) : [];
             
@@ -316,14 +341,14 @@ export default function DashboardDefinitiva() {
                     {(item.status === 'Não Conforme' || item.observacao_resolucao) && (
                       <div className="bg-red-50 p-3 rounded-2xl border-l-4 border-red-500">
                          <p className="text-[6px] text-red-500 font-black uppercase italic">Ocorrência:</p>
-                         <p className="text-[10px] font-bold text-slate-700 italic leading-tight">"{item.observacao || 'SEM DESCRIÇÃO'}"</p>
+                         <p className="text-[10px] font-bold text-slate-700 italic leading-tight">&quot;{item.observacao || 'SEM DESCRIÇÃO'}&quot;</p>
                       </div>
                     )}
 
                     {item.observacao_resolucao && (
                       <div className="bg-green-50 p-3 rounded-2xl border-l-4 border-green-500">
                          <p className="text-[6px] text-green-600 font-black uppercase italic">Tratativa Efetuada:</p>
-                         <p className="text-[10px] font-bold text-green-800 italic leading-tight">"{item.observacao_resolucao}"</p>
+                         <p className="text-[10px] font-bold text-green-800 italic leading-tight">&quot;{item.observacao_resolucao}&quot;</p>
                       </div>
                     )}
                   </div>
@@ -331,6 +356,17 @@ export default function DashboardDefinitiva() {
               </div>
             );
           })}
+          
+          {displayReports.length > visibleCount && (
+            <div className="col-span-full flex justify-center mt-8 no-print">
+               <button 
+                 onClick={() => setVisibleCount(prev => prev + 50)} 
+                 className="bg-indigo-100 text-indigo-700 border-2 border-indigo-200 px-8 py-4 rounded-2xl font-black uppercase italic shadow-sm hover:bg-indigo-600 hover:text-white transition-all active:scale-95 text-[10px]"
+               >
+                  ⬇️ CARREGAR MAIS TAREFAS ({displayReports.length - visibleCount} RESTANTES)
+               </button>
+            </div>
+          )}
         </main>
       </div>
 
@@ -362,18 +398,17 @@ export default function DashboardDefinitiva() {
               <div className="space-y-4">
                 <div className="bg-red-50 p-6 rounded-[2rem] border-l-8 border-red-500">
                   <p className="text-[8px] text-red-600 mb-2 font-black uppercase italic">Análise do Problema:</p>
-                  <p className="text-sm font-bold italic text-slate-900 leading-relaxed uppercase">" {(selectedTask as any).observacao || 'NÃO DESCRITO'} "</p>
+                  <p className="text-sm font-bold italic text-slate-900 leading-relaxed uppercase">&quot; {(selectedTask as any).observacao || 'NÃO DESCRITO'} &quot;</p>
                 </div>
 
                 {(selectedTask as any).observacao_resolucao && (
                   <div className="bg-green-50 p-6 rounded-[2rem] border-l-8 border-green-500">
                     <p className="text-[8px] text-green-600 mb-2 font-black uppercase italic">Tratativa de Resolução:</p>
-                    <p className="text-sm font-bold italic text-green-900 leading-relaxed uppercase">" {(selectedTask as any).observacao_resolucao} "</p>
+                    <p className="text-sm font-bold italic text-green-900 leading-relaxed uppercase">&quot; {(selectedTask as any).observacao_resolucao} &quot;</p>
                     <p className="text-[7px] text-green-500 mt-2 font-black italic">FINALIZADO EM: {new Date((selectedTask as any).resolvido_em).toLocaleString()}</p>
                   </div>
                 )}
                 
-                {/* 🚀 NOVA CAIXA COMPARTILHADA (Aparece para pendências) */}
                 {(selectedTask as any).status === 'Não Conforme' && (
                   <div className="bg-amber-100 p-6 rounded-[2rem] border-l-8 border-amber-400 mt-4 no-print">
                     <div className="flex justify-between items-center mb-2">
