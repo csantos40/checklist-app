@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Checklist Vivian",
-  description: "Sistema de monitoramento e auditoria - Supermercados Vivian",
+  title: "Check Store",
+  description: "Sistema de monitoramento e auditoria - Check Store",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon-192.png",

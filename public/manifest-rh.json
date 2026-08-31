@@ -1,8 +1,8 @@
 {
   "id": "app-rh",
-  "name": "RH Vivian",
+  "name": "RH Check Store",
   "short_name": "RH",
-  "description": "Painel de RH - Supermercados Vivian",
+  "description": "Painel de RH - Check Store",
   "start_url": "/rh/",
   "scope": "/rh/",
   "display": "standalone",

@@ -1,8 +1,8 @@
 {
   "id": "app-teste",
-  "name": "Teste Vivian",
+  "name": "Teste Check Store",
   "short_name": "Teste",
-  "description": "Ambiente de Teste - Supermercados Vivian",
+  "description": "Ambiente de Teste - Check Store",
   "start_url": "/teste/",
   "scope": "/teste/",
   "display": "standalone",

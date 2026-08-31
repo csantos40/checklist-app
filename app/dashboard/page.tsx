@@ -14,10 +14,7 @@ export default function DashboardDefinitiva() {
   const [endDate, setEndDate] = useState(''); 
   const [selectedTask, setSelectedTask] = useState(null);
   
-  // 🚀 ESTADO PARA CONTROLAR A QUANTIDADE DE TAREFAS NA TELA (PAGINAÇÃO VIRTUAL)
   const [visibleCount, setVisibleCount] = useState(50);
-  
-  // 🚀 NOVOS ESTADOS PARA A CAIXA DE OBSERVAÇÃO COMPARTILHADA
   const [comentarioGestao, setComentarioGestao] = useState('');
   const [salvandoComentario, setSalvandoComentario] = useState(false);
   
@@ -53,7 +50,7 @@ export default function DashboardDefinitiva() {
         .select('*')
         .neq('setor', 'TESTE_SISTEMA')
         .order('created_at', { ascending: false })
-        .limit(3000); 
+        .limit(100000); // 🚀 Trava expandida para exibir o histórico total da diretoria
       setReports(data || []);
     } catch (err) { console.error("Erro ao buscar dados:", err); } finally { setLoading(false); }
   };
@@ -80,19 +77,16 @@ export default function DashboardDefinitiva() {
     };
   }, [supabase, authorized]);
 
-  // 🚀 ZERA A PAGINAÇÃO SEMPRE QUE O USUÁRIO MEXER NOS FILTROS
   useEffect(() => {
     setVisibleCount(50);
   }, [selectedSector, statusFilter, startDate, endDate]);
 
-  // 🚀 CARREGA O COMENTÁRIO DO BANCO DE DADOS QUANDO ABRIR A TAREFA
   useEffect(() => {
     if (selectedTask) {
       setComentarioGestao((selectedTask as any).comentario_gestao || '');
     }
   }, [selectedTask]);
 
-  // 🚀 FUNÇÃO PARA SALVAR O COMENTÁRIO NO SUPABASE
   const salvarComentario = async () => {
     if (!supabase || !selectedTask) return;
     
@@ -162,7 +156,6 @@ export default function DashboardDefinitiva() {
     else window.location.href = '/gestao';
   };
 
-  // 🚀 PASSO 1: FILTRO BASE (Apenas Data e Setor) para os indicadores não sumirem
   const baseReports = reports.filter((r: any) => {
     const matchSector = selectedSector === 'TODOS' || r.setor === selectedSector;
     let matchDate = true;
@@ -180,18 +173,48 @@ export default function DashboardDefinitiva() {
     return matchSector && matchDate;
   });
 
-  // 🚀 PASSO 2: CONTADORES FIXOS BASEADOS NO FILTRO DE DATA/SETOR
   const conformesCount = baseReports.filter((r: any) => r.status === 'Conforme').length;
   const naoConformesCount = baseReports.filter((r: any) => r.status === 'Não Conforme').length;
   const totalNoFiltro = baseReports.length;
   
-  // Otimização: casas decimais exatas (ex: 99.9%)
   const percentConforme = totalNoFiltro > 0 ? parseFloat(((conformesCount / totalNoFiltro) * 100).toFixed(1)) : 0;
   const percentNaoConforme = totalNoFiltro > 0 ? parseFloat(((naoConformesCount / totalNoFiltro) * 100).toFixed(1)) : 0;
 
-  // 🚀 PASSO 3: FILTRO FINAL (Aplica o botão de status clicado para mostrar na tela)
   const displayReports = baseReports.filter((r: any) => {
     return statusFilter === 'TODOS' || r.status === statusFilter;
+  });
+
+  // 🚀 LÓGICA DO ENGAJAMENTO MENSAL (EXCLUINDO DOMINGOS)
+  const hojeCalc = new Date();
+  const mesAtualStr = hojeCalc.toLocaleString('pt-BR', { month: 'long' }).toUpperCase();
+  const anoAtual = hojeCalc.getFullYear();
+  const mesAtual = hojeCalc.getMonth();
+  
+  const diasNoMes = new Date(anoAtual, mesAtual + 1, 0).getDate();
+  const diasCorridos = hojeCalc.getDate();
+
+  const contarDomingos = (ano: number, mes: number, diaFim: number) => {
+    let domingos = 0;
+    for (let i = 1; i <= diaFim; i++) {
+      if (new Date(ano, mes, i).getDay() === 0) domingos++;
+    }
+    return domingos;
+  };
+
+  const totalDiasUteisMes = diasNoMes - contarDomingos(anoAtual, mesAtual, diasNoMes);
+  const diasUteisCorridos = diasCorridos - contarDomingos(anoAtual, mesAtual, diasCorridos);
+
+  const engajamentoMensal = SETORES_FILTRO.map(setor => {
+    const repSetor = reports.filter((r: any) => {
+      const d = new Date(r.created_at);
+      return d.getMonth() === mesAtual && d.getFullYear() === anoAtual && r.setor === setor;
+    });
+    const diasUnicos = new Set(repSetor.map((r: any) => new Date(r.created_at).toLocaleDateString()));
+    return {
+      setor,
+      realizado: diasUnicos.size,
+      total: totalDiasUteisMes
+    };
   });
 
   if (!authorized) return null;
@@ -298,6 +321,48 @@ export default function DashboardDefinitiva() {
             </div>
           </div>
         )}
+
+        {/* 🚀 NOVO BLOCO: ENGAJAMENTO MENSAL (DIAS ÚTEIS) */}
+        <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 no-print mb-6">
+          <div className="flex items-center justify-between mb-6">
+             <div className="flex items-center gap-3">
+               <div className="bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-xl">📅</div>
+               <div>
+                 <h2 className="text-indigo-800 text-lg font-black uppercase italic tracking-tighter">ENGAJAMENTO MENSAL - {mesAtualStr}</h2>
+                 <p className="text-slate-400 text-[10px] uppercase font-bold italic">Dias Auditados / Dias Úteis Totais do Mês (Sem Domingos)</p>
+               </div>
+             </div>
+             <div className="text-right bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+               <p className="text-[8px] text-slate-400 uppercase font-black italic">Dias Úteis Corridos</p>
+               <p className="text-lg text-slate-700 font-black leading-none">{diasUteisCorridos} <span className="text-[10px]">DIAS</span></p>
+             </div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {engajamentoMensal.map(eng => {
+              const porcentagem = eng.total > 0 ? (eng.realizado / eng.total) * 100 : 0;
+              const taNoRitmo = eng.realizado >= diasUteisCorridos - 1; 
+              
+              return (
+                <div key={eng.setor} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col items-center text-center justify-center relative overflow-hidden">
+                  {taNoRitmo ? (
+                    <div className="absolute top-0 w-full h-1 bg-green-500"></div>
+                  ) : (
+                    <div className="absolute top-0 w-full h-1 bg-amber-500"></div>
+                  )}
+                  <p className="text-[9px] text-slate-800 font-black uppercase italic leading-tight mb-3 h-6 flex items-center">{eng.setor}</p>
+                  <div className="flex items-end gap-1">
+                     <p className={`text-3xl font-black leading-none ${taNoRitmo ? 'text-green-600' : 'text-amber-600'}`}>{eng.realizado}</p>
+                     <p className="text-xs text-slate-400 font-bold mb-1">/ {eng.total}</p>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-1.5 mt-3 overflow-hidden">
+                     <div className={`h-1.5 rounded-full ${taNoRitmo ? 'bg-green-500' : 'bg-amber-500'}`} style={{ width: `${porcentagem}%` }}></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="flex flex-wrap gap-2 justify-center bg-white p-4 rounded-[1.5rem] shadow-sm border border-slate-100">
           <button onClick={() => {setSelectedSector('TODOS'); setStatusFilter('TODOS'); setStartDate(''); setEndDate('');}} className={`px-4 py-2 rounded-lg text-[9px] border-2 transition-all ${selectedSector === 'TODOS' && statusFilter === 'TODOS' && startDate === '' && endDate === '' ? 'bg-black text-white border-black' : 'bg-white text-slate-400 border-slate-50'}`}>RESETAR TUDO</button>

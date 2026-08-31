@@ -1,8 +1,8 @@
 {
   "id": "app-gestao",
-  "name": "Gestão Vivian",
+  "name": "Gestão Check Store",
   "short_name": "Gestão",
-  "description": "Painel de Gestão - Supermercados Vivian",
+  "description": "Painel de Gestão - Check Store",
   "start_url": "/gestao/",
   "scope": "/gestao/",
   "display": "standalone",
