@@ -18,11 +18,22 @@ export default function DashboardDefinitiva() {
   const [comentarioGestao, setComentarioGestao] = useState('');
   const [salvandoComentario, setSalvandoComentario] = useState(false);
   
+  // 🚀 Novo estado para gerenciar o relógio em tempo real
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
+  
   const router = useRouter();
 
   const SETORES_FILTRO = ["Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios e Laticínios)", "Padaria-Confeitaria-Rotisseria"];
 
   useEffect(() => {
+    // Inicializa a data atual no lado do cliente
+    setCurrentDate(new Date());
+    
+    // Atualiza o relógio a cada minuto para garantir virada de dia/mês com aba aberta
+    const clockInterval = setInterval(() => {
+      setCurrentDate(new Date());
+    }, 60000);
+
     const authStatus = localStorage.getItem('user_auth');
     if (authStatus === 'direcao' || authStatus === 'rh' || authStatus === 'gerente' || authStatus === 'teste_sistema') {
       setAuthorized(true);
@@ -40,6 +51,8 @@ export default function DashboardDefinitiva() {
       setSupabase(client);
     };
     document.body.appendChild(script);
+
+    return () => clearInterval(clockInterval);
   }, [router]);
 
   const fetchData = async (client: any) => {
@@ -50,7 +63,7 @@ export default function DashboardDefinitiva() {
         .select('*')
         .neq('setor', 'TESTE_SISTEMA')
         .order('created_at', { ascending: false })
-        .limit(100000); // 🚀 Trava expandida para exibir o histórico total da diretoria
+        .limit(100000); 
       setReports(data || []);
     } catch (err) { console.error("Erro ao buscar dados:", err); } finally { setLoading(false); }
   };
@@ -118,16 +131,15 @@ export default function DashboardDefinitiva() {
   };
 
   const calcularSLA = (dataCriacao: any) => {
-    if (!dataCriacao) return 0;
-    const hoje = new Date();
+    if (!dataCriacao || !currentDate) return 0;
     const criacao = new Date(dataCriacao);
-    const diffTime = Math.abs(hoje.getTime() - criacao.getTime());
+    const diffTime = Math.abs(currentDate.getTime() - criacao.getTime());
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const calcularDiasSemPreencher = (dataIso: string | null) => {
-    if (!dataIso) return Infinity;
-    const hoje = new Date();
+    if (!dataIso || !currentDate) return Infinity;
+    const hoje = new Date(currentDate);
     hoje.setHours(0, 0, 0, 0); 
     const criacao = new Date(dataIso);
     criacao.setHours(0, 0, 0, 0);
@@ -184,14 +196,16 @@ export default function DashboardDefinitiva() {
     return statusFilter === 'TODOS' || r.status === statusFilter;
   });
 
-  // 🚀 LÓGICA DO ENGAJAMENTO MENSAL (EXCLUINDO DOMINGOS)
-  const hojeCalc = new Date();
-  const mesAtualStr = hojeCalc.toLocaleString('pt-BR', { month: 'long' }).toUpperCase();
-  const anoAtual = hojeCalc.getFullYear();
-  const mesAtual = hojeCalc.getMonth();
+  // Aguarda a montagem do componente para não exibir cache antigo
+  if (!authorized || !currentDate) return null;
+
+  // 🚀 LÓGICA DO ENGAJAMENTO MENSAL CORRIGIDA (TEMPO REAL)
+  const mesAtualStr = currentDate.toLocaleString('pt-BR', { month: 'long' }).toUpperCase();
+  const anoAtual = currentDate.getFullYear();
+  const mesAtual = currentDate.getMonth();
   
   const diasNoMes = new Date(anoAtual, mesAtual + 1, 0).getDate();
-  const diasCorridos = hojeCalc.getDate();
+  const diasCorridos = currentDate.getDate();
 
   const contarDomingos = (ano: number, mes: number, diaFim: number) => {
     let domingos = 0;
@@ -216,8 +230,6 @@ export default function DashboardDefinitiva() {
       total: totalDiasUteisMes
     };
   });
-
-  if (!authorized) return null;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 font-sans uppercase italic font-black text-[#1E293B]">
@@ -322,7 +334,7 @@ export default function DashboardDefinitiva() {
           </div>
         )}
 
-        {/* 🚀 NOVO BLOCO: ENGAJAMENTO MENSAL (DIAS ÚTEIS) */}
+        {/* 🚀 BLOCO: ENGAJAMENTO MENSAL EM TEMPO REAL */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 no-print mb-6">
           <div className="flex items-center justify-between mb-6">
              <div className="flex items-center gap-3">
