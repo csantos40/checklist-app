@@ -18,7 +18,10 @@ export default function DashboardDefinitiva() {
   const [comentarioGestao, setComentarioGestao] = useState('');
   const [salvandoComentario, setSalvandoComentario] = useState(false);
   
-  // 🚀 Novo estado para gerenciar o relógio em tempo real
+  // Estados para o calendário interativo
+  const [calendarioSetor, setCalendarioSetor] = useState<string | null>(null);
+  const [diaDetalhe, setDiaDetalhe] = useState<number | null>(null); // 🚀 Novo estado para detalhe do dia
+  
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   
   const router = useRouter();
@@ -26,10 +29,8 @@ export default function DashboardDefinitiva() {
   const SETORES_FILTRO = ["Gerente", "SubGerente", "FLV", "Mercearia", "FLC (Frios e Laticínios)", "Padaria-Confeitaria-Rotisseria"];
 
   useEffect(() => {
-    // Inicializa a data atual no lado do cliente
     setCurrentDate(new Date());
     
-    // Atualiza o relógio a cada minuto para garantir virada de dia/mês com aba aberta
     const clockInterval = setInterval(() => {
       setCurrentDate(new Date());
     }, 60000);
@@ -79,7 +80,6 @@ export default function DashboardDefinitiva() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'respostas' },
         () => {
-          console.log('⚡ Mudança detectada! Atualizando Dashboard...');
           fetchData(supabase);
         }
       )
@@ -122,7 +122,7 @@ export default function DashboardDefinitiva() {
       setReports(updatedReports);
       setSelectedTask({ ...selectedTask, comentario_gestao: comentarioGestao } as any);
       
-      alert("✅ Observação salva com sucesso! Todos já podem ver.");
+      alert("✅ Observação salva com sucesso!");
     } catch (err) {
       alert("❌ Erro ao salvar observação. Tente novamente.");
     } finally {
@@ -196,10 +196,8 @@ export default function DashboardDefinitiva() {
     return statusFilter === 'TODOS' || r.status === statusFilter;
   });
 
-  // Aguarda a montagem do componente para não exibir cache antigo
   if (!authorized || !currentDate) return null;
 
-  // 🚀 LÓGICA DO ENGAJAMENTO MENSAL CORRIGIDA (TEMPO REAL)
   const mesAtualStr = currentDate.toLocaleString('pt-BR', { month: 'long' }).toUpperCase();
   const anoAtual = currentDate.getFullYear();
   const mesAtual = currentDate.getMonth();
@@ -230,6 +228,171 @@ export default function DashboardDefinitiva() {
       total: totalDiasUteisMes
     };
   });
+
+  // 🚀 LÓGICA DO CALENDÁRIO COM DETALHAMENTO DE DIAS
+  const renderCalendarioGrid = () => {
+    if (!calendarioSetor) return null;
+
+    const isGeral = calendarioSetor === 'GERAL';
+    const tituloModal = isGeral ? "Visão Geral da Loja" : "Histórico de Auditoria";
+    const subtituloModal = isGeral ? `Status Integrado • ${mesAtualStr} ${anoAtual}` : `${calendarioSetor} • ${mesAtualStr} ${anoAtual}`;
+
+    const primeiroDiaSemana = new Date(anoAtual, mesAtual, 1).getDay();
+    const diasArray = Array(primeiroDiaSemana).fill(null);
+    for (let i = 1; i <= diasNoMes; i++) diasArray.push(i);
+
+    const reportsMes = reports.filter((r: any) => {
+      const d = new Date(r.created_at);
+      return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+    });
+
+    const setoresPorDia: Record<number, Set<string>> = {};
+    for (let i = 1; i <= diasNoMes; i++) setoresPorDia[i] = new Set();
+
+    reportsMes.forEach((r: any) => {
+      const dia = new Date(r.created_at).getDate();
+      if (SETORES_FILTRO.includes(r.setor)) {
+        setoresPorDia[dia]?.add(r.setor);
+      }
+    });
+
+    const diasDaSemanaNomes = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
+
+    return (
+      <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl relative animate-in zoom-in duration-300">
+          <button onClick={() => { setCalendarioSetor(null); setDiaDetalhe(null); }} className="absolute top-4 right-4 bg-slate-100 text-slate-800 w-10 h-10 rounded-full flex items-center justify-center text-xl font-black hover:bg-red-600 hover:text-white transition-all z-10">✕</button>
+          
+          {diaDetalhe ? (
+            // 🚀 TELA DE DETALHES DO DIA CLICADO
+            <div className="animate-in slide-in-from-right-8 duration-300">
+               <div className="flex items-center gap-4 mb-6 border-b-2 border-slate-100 pb-4">
+                  <button onClick={() => setDiaDetalhe(null)} className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase italic hover:bg-indigo-600 hover:text-white transition-all shadow-sm">← VOLTAR</button>
+                  <div>
+                    <h2 className="text-2xl font-black uppercase italic text-[#1E293B]">DIA {diaDetalhe}</h2>
+                    <p className="text-indigo-600 text-[10px] mt-1 font-black italic uppercase">Detalhamento Operacional</p>
+                  </div>
+               </div>
+
+               <div className="space-y-6">
+                 <div>
+                    <div className="flex items-center gap-2 mb-3">
+                       <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-sm shadow-sm">❌</div>
+                       <h3 className="text-sm font-black uppercase italic text-red-600">INADIMPLENTES (NÃO ENVIARAM)</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                       {SETORES_FILTRO.filter(s => !setoresPorDia[diaDetalhe]?.has(s)).map(s => (
+                          <span key={s} className="bg-white border-2 border-red-200 text-red-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-sm">{s}</span>
+                       ))}
+                       {SETORES_FILTRO.filter(s => !setoresPorDia[diaDetalhe]?.has(s)).length === 0 && (
+                          <span className="text-[10px] text-slate-400 font-bold uppercase italic bg-slate-50 px-4 py-2 rounded-xl w-full text-center">NENHUMA PENDÊNCIA NESTE DIA! 🎉</span>
+                       )}
+                    </div>
+                 </div>
+
+                 <div>
+                    <div className="flex items-center gap-2 mb-3">
+                       <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-sm shadow-sm">✅</div>
+                       <h3 className="text-sm font-black uppercase italic text-green-600">CONFORMES (ENVIARAM)</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                       {SETORES_FILTRO.filter(s => setoresPorDia[diaDetalhe]?.has(s)).map(s => (
+                          <span key={s} className="bg-white border-2 border-green-200 text-green-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-sm">{s}</span>
+                       ))}
+                       {SETORES_FILTRO.filter(s => setoresPorDia[diaDetalhe]?.has(s)).length === 0 && (
+                          <span className="text-[10px] text-slate-400 font-bold uppercase italic bg-slate-50 px-4 py-2 rounded-xl w-full text-center">NENHUM SETOR ENVIOU.</span>
+                       )}
+                    </div>
+                 </div>
+               </div>
+            </div>
+          ) : (
+            // 🚀 TELA DO CALENDÁRIO NORMAL
+            <div className="animate-in fade-in duration-300">
+              <div className="mb-6 text-center">
+                <h2 className="text-2xl font-black uppercase italic text-[#1E293B]">{tituloModal}</h2>
+                <p className="text-indigo-600 text-[10px] mt-1 font-black italic uppercase">{subtituloModal}</p>
+                {isGeral && <p className="text-[8px] mt-2 text-slate-400 font-bold uppercase">Clique nos dias coloridos para ver os detalhes</p>}
+              </div>
+
+              <div className="grid grid-cols-7 gap-2 mb-2 text-center border-b-2 border-slate-100 pb-2">
+                {diasDaSemanaNomes.map(dia => (
+                  <div key={dia} className="text-[8px] font-black uppercase text-slate-400">{dia}</div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {diasArray.map((dia, idx) => {
+                  if (!dia) return <div key={idx} className="h-11"></div>;
+
+                  const isDomingo = new Date(anoAtual, mesAtual, dia).getDay() === 0;
+                  const isFuturo = dia > currentDate.getDate();
+                  
+                  const numSetores = setoresPorDia[dia]?.size || 0;
+                  const totalSetores = SETORES_FILTRO.length;
+                  const fezAuditoriaSetor = setoresPorDia[dia]?.has(calendarioSetor || '');
+
+                  let bgClass = "bg-slate-50 text-slate-400 border border-slate-100"; 
+                  let cursorClass = "";
+
+                  if (isDomingo) {
+                    bgClass = "bg-slate-200 text-slate-400 opacity-50"; 
+                  } else if (!isFuturo) {
+                    if (isGeral) {
+                      cursorClass = "cursor-pointer hover:scale-110 hover:shadow-lg hover:z-10";
+                      if (numSetores === totalSetores) {
+                        bgClass = "bg-green-500 text-white shadow-md border border-green-600 scale-105"; 
+                      } else if (numSetores === 0) {
+                        bgClass = "bg-red-500 text-white shadow-md border border-red-600 animate-pulse"; 
+                      } else {
+                        bgClass = "bg-amber-400 text-white shadow-md border border-amber-500"; 
+                      }
+                    } else {
+                      if (fezAuditoriaSetor) {
+                        bgClass = "bg-green-500 text-white shadow-md border border-green-600 scale-105"; 
+                      } else {
+                        bgClass = "bg-red-500 text-white shadow-md border border-red-600 animate-pulse"; 
+                      }
+                    }
+                  }
+
+                  return (
+                    <div 
+                      key={idx} 
+                      onClick={() => {
+                         if (isGeral && !isDomingo && !isFuturo) setDiaDetalhe(dia);
+                      }}
+                      className={`h-11 rounded-xl flex flex-col items-center justify-center font-black transition-all ${bgClass} ${cursorClass}`}
+                    >
+                      <span className="text-sm leading-none">{dia}</span>
+                      {isGeral && !isDomingo && !isFuturo && (
+                        <span className="text-[6px] mt-1 leading-none bg-black/20 px-1.5 py-0.5 rounded opacity-90">{numSetores}/{totalSetores}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {isGeral ? (
+                <div className="mt-8 pt-4 border-t-2 border-slate-100 flex flex-wrap justify-center gap-3">
+                   <div className="flex items-center gap-2 text-[7px] uppercase font-black text-slate-500"><div className="w-3 h-3 bg-green-500 rounded-sm"></div> 100% Loja</div>
+                   <div className="flex items-center gap-2 text-[7px] uppercase font-black text-slate-500"><div className="w-3 h-3 bg-amber-400 rounded-sm"></div> Parcial</div>
+                   <div className="flex items-center gap-2 text-[7px] uppercase font-black text-slate-500"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> Nenhum</div>
+                   <div className="flex items-center gap-2 text-[7px] uppercase font-black text-slate-500"><div className="w-3 h-3 bg-slate-200 rounded-sm"></div> Isento</div>
+                </div>
+              ) : (
+                <div className="mt-8 pt-4 border-t-2 border-slate-100 flex justify-center gap-4">
+                   <div className="flex items-center gap-2 text-[8px] uppercase font-black text-slate-500"><div className="w-3 h-3 bg-green-500 rounded-sm"></div> Enviado</div>
+                   <div className="flex items-center gap-2 text-[8px] uppercase font-black text-slate-500"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> Faltou</div>
+                   <div className="flex items-center gap-2 text-[8px] uppercase font-black text-slate-500"><div className="w-3 h-3 bg-slate-200 rounded-sm"></div> Isento</div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-6 font-sans uppercase italic font-black text-[#1E293B]">
@@ -334,19 +497,26 @@ export default function DashboardDefinitiva() {
           </div>
         )}
 
-        {/* 🚀 BLOCO: ENGAJAMENTO MENSAL EM TEMPO REAL */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 no-print mb-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
              <div className="flex items-center gap-3">
-               <div className="bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-xl">📅</div>
+               <div className="bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-md">📅</div>
                <div>
                  <h2 className="text-indigo-800 text-lg font-black uppercase italic tracking-tighter">ENGAJAMENTO MENSAL - {mesAtualStr}</h2>
-                 <p className="text-slate-400 text-[10px] uppercase font-bold italic">Dias Auditados / Dias Úteis Totais do Mês (Sem Domingos)</p>
+                 <p className="text-slate-400 text-[10px] uppercase font-bold italic">Clique nos setores ou abra a visão geral unificada</p>
                </div>
              </div>
-             <div className="text-right bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-               <p className="text-[8px] text-slate-400 uppercase font-black italic">Dias Úteis Corridos</p>
-               <p className="text-lg text-slate-700 font-black leading-none">{diasUteisCorridos} <span className="text-[10px]">DIAS</span></p>
+             <div className="flex gap-4 w-full md:w-auto">
+               <button 
+                 onClick={() => setCalendarioSetor('GERAL')} 
+                 className="flex-1 md:flex-none bg-indigo-600 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase italic shadow-md hover:bg-indigo-700 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+               >
+                  <span className="text-lg leading-none">🗺️</span> VISÃO GERAL DA LOJA
+               </button>
+               <div className="text-right bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 hidden md:block">
+                 <p className="text-[8px] text-slate-400 uppercase font-black italic">Dias Úteis Corridos</p>
+                 <p className="text-lg text-slate-700 font-black leading-none">{diasUteisCorridos} <span className="text-[10px]">DIAS</span></p>
+               </div>
              </div>
           </div>
           
@@ -356,7 +526,12 @@ export default function DashboardDefinitiva() {
               const taNoRitmo = eng.realizado >= diasUteisCorridos - 1; 
               
               return (
-                <div key={eng.setor} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col items-center text-center justify-center relative overflow-hidden">
+                <div 
+                  key={eng.setor} 
+                  onClick={() => setCalendarioSetor(eng.setor)}
+                  className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col items-center text-center justify-center relative overflow-hidden cursor-pointer hover:scale-105 hover:shadow-lg hover:border-indigo-300 transition-all group"
+                >
+                  <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-all"></div>
                   {taNoRitmo ? (
                     <div className="absolute top-0 w-full h-1 bg-green-500"></div>
                   ) : (
@@ -370,6 +545,7 @@ export default function DashboardDefinitiva() {
                   <div className="w-full bg-slate-200 rounded-full h-1.5 mt-3 overflow-hidden">
                      <div className={`h-1.5 rounded-full ${taNoRitmo ? 'bg-green-500' : 'bg-amber-500'}`} style={{ width: `${porcentagem}%` }}></div>
                   </div>
+                  <div className="mt-2 text-[6px] text-indigo-400 font-black uppercase italic opacity-0 group-hover:opacity-100 transition-all tracking-widest">Ver Setor 📅</div>
                 </div>
               );
             })}
@@ -528,6 +704,9 @@ export default function DashboardDefinitiva() {
           </div>
         </div>
       )}
+
+      {renderCalendarioGrid()}
+
     </div>
   );
 }
