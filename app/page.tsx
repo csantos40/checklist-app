@@ -138,7 +138,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (category === 'Confeitaria') { setTop10Confeitaria(data); localStorage.setItem('top10_confeitaria', JSON.stringify(data)); }
   };
 
-  // 🚀 LÓGICA DE FOTOS NO TOP 10
+  // 🚀 LÓGICA DE FOTOS NO TOP 10 COM COMPRESSÃO BLINDADA
   const handleTop10Photo = async (e: any, category: string, id: string) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -158,6 +158,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
         reader.onloadend = () => updatePhoto(reader.result as string);
         reader.readAsDataURL(compressedFile);
     } catch (error) {
+        console.warn("⚠️ Falha na compressão da imagem do TOP 10. Enviando arquivo original...", error);
         const reader = new FileReader();
         reader.onloadend = () => updatePhoto(reader.result as string);
         reader.readAsDataURL(file);
@@ -235,7 +236,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     const verificarHorario = () => {
       if (!department) return;
       const horaAtual = new Date().getHours();
-      // Não impõe horário para Compras e testes
       if (department.includes('Compra') || department === 'TESTE_SISTEMA') {
         setForaDoHorario(false);
       } else if (department === 'SubGerente') {
@@ -413,7 +413,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     }
   }, [isAuthenticated, department]);
 
-  // 🚀 OTIMIZAÇÃO DE PERFORMANCE: LIMITAR PENDÊNCIAS EM 50
   useEffect(() => {
     async function puxarPendenciasReais() {
       if (!supabase || !department || currentPeriodicity !== 'PENDÊNCIAS') return;
@@ -548,7 +547,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (task.subStatuses && Object.values(task.subStatuses).includes('Aguardando')) return alert("AVALIE TODOS OS BALCÕES ANTES DE FINALIZAR ESTA TAREFA!");
     if (task.status === 'Aguardando') return alert("SELECIONE O STATUS ANTES!");
     
-    // 🚀 VALIDAÇÃO DO BOTÃO DE FINALIZAR ATUALIZADA
     if (task.status === 'Não Conforme') {
         const isComprasTask = department.includes('Compra') || task.testSector?.includes('COMPRAS');
         if (!isComprasTask && (!task.photos || task.photos.length === 0)) return alert("NÃO CONFORME EXIGE PELO MENOS UMA FOTO!");
@@ -610,7 +608,6 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
     if (foraDoHorario) return alert("FORA DO HORÁRIO PERMITIDO PARA O SEU SETOR!");
     if (isLockedToday) return;
 
-    // 🚀 ENVIO DOS DADOS DA NOVA ABA DE ANÁLISE GC ATUALIZADA (COM PERÍODO DE DATAS)
     if (currentPeriodicity === 'ANÁLISE GC') {
       if (!gcData.departamento) return alert("Por favor, preencha o Nome do Departamento (Ex: Frios) antes de salvar!");
       if (isTeste) return alert("✅ ANÁLISE GC SALVA COM SUCESSO NO AMBIENTE DE TESTE!");
@@ -618,16 +615,16 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
       setLoading(true);
       try {
          const observacaoFormatada = `
-           Departamento: ${gcData.departamento} | 
-           Período: ${gcData.dataInicio ? gcData.dataInicio.split('-').reverse().join('/') : '?'} a ${gcData.dataFim ? gcData.dataFim.split('-').reverse().join('/') : '?'} | 
-           Cat. Desenvolvidas: ${gcData.categoriasDesenvolvidas || '0'} | 
-           Cat. c/ Resultado Positivo: ${gcData.categoriasPositivas || '0'} | 
-           Cat. c/ Resultado Negativo: ${gcData.categoriasNegativas || '0'} | 
-           Cat. c/ Margem Reduzida: ${gcData.categoriasMargemReduzida || '0'} | 
-           Red. de quantidades: ${gcData.reducaoQuantidades || '0'} | 
-           Red. do valor de venda: ${gcData.reducaoValorVenda || '0'} | 
-           Red. do valor de lucro: ${gcData.reducaoValorLucro || '0'} | 
-           Red. de margem de contri: ${gcData.reducaoMargem || '0'}
+            Departamento: ${gcData.departamento} | 
+            Período: ${gcData.dataInicio ? gcData.dataInicio.split('-').reverse().join('/') : '?'} a ${gcData.dataFim ? gcData.dataFim.split('-').reverse().join('/') : '?'} | 
+            Cat. Desenvolvidas: ${gcData.categoriasDesenvolvidas || '0'} | 
+            Cat. c/ Resultado Positivo: ${gcData.categoriasPositivas || '0'} | 
+            Cat. c/ Resultado Negativo: ${gcData.categoriasNegativas || '0'} | 
+            Cat. c/ Margem Reduzida: ${gcData.categoriasMargemReduzida || '0'} | 
+            Red. de quantidades: ${gcData.reducaoQuantidades || '0'} | 
+            Red. do valor de venda: ${gcData.reducaoValorVenda || '0'} | 
+            Red. do valor de lucro: ${gcData.reducaoValorLucro || '0'} | 
+            Red. de margem de contri: ${gcData.reducaoMargem || '0'}
          `.replace(/\n/g, '').trim();
 
          const payload = {
@@ -681,8 +678,21 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
               }
             } catch (err) { console.error("Falha ao subir foto do TOP 10", err); }
           }
+          
           const statusText = t.statuses ? Object.entries(t.statuses).map(([time, val]) => `${time} (${val || 'Sem Registo'})`).join(' | ') : '';
-          return { setor: department, tarefa: `TOP 10: ${t.name}`, status: 'Conforme', observacao: `Acompanhamento: ${statusText}`, foto_url: fotoUrlFinal, created_at: new Date().toISOString() };
+          
+          // 🚀 NOVA LÓGICA DINÂMICA DE STATUS: SE TIVER PELO MENOS UM "N", É NÃO CONFORME!
+          const teveFalta = t.statuses && Object.values(t.statuses).includes('N');
+          const finalStatus = teveFalta ? 'Não Conforme' : 'Conforme';
+
+          return { 
+            setor: department, 
+            tarefa: `TOP 10: ${t.name}`, 
+            status: finalStatus, 
+            observacao: `Acompanhamento: ${statusText}`, 
+            foto_url: fotoUrlFinal, 
+            created_at: new Date().toISOString() 
+          };
         }));
         const { error } = await supabase.from('respostas').insert(payloads);
         if (error) throw error;
@@ -1245,7 +1255,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                               {!task.frozen && <p className={`text-[8px] text-right mt-2 uppercase font-black ${task.observation?.length >= 15 ? 'text-green-600' : 'text-red-500'}`}>{task.observation?.length || 0}/15 CARACTERES EXIGIDOS</p>}
                             </div>
                             
-                            {/* 🚀 CÂMERA TOTALMENTE OCULTA PARA OS SETORES DE COMPRAS (Mesmo no modo teste) */}
+                            {/* 🚀 CÂMERA TOTALMENTE OCULTA PARA OS SETORES DE COMPRAS */}
                             {(!isComprasTask) && (
                               <div className="flex flex-wrap gap-3 items-center font-black italic">
                                 {task.photos?.map((p: string, pIdx: number) => (
@@ -1257,6 +1267,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                                 {!task.frozen && (
                                     <label className="w-10 h-10 flex items-center justify-center rounded-full bg-indigo-600 text-white text-xl cursor-pointer shadow-md active:scale-95 transition-all border-2 border-white text-white font-black font-black italic">
                                       +
+                                      {/* 🚀 LÓGICA DA CÂMERA PRINCIPAL COM COMPRESSÃO BLINDADA */}
                                       <input type="file" accept="image/*" capture="environment" className="hidden font-black italic" onChange={async (e: any) => {
                                         const file = e.target.files[0];
                                         if (!file) return;
@@ -1268,6 +1279,7 @@ export default function Home({ isTesteRoute = false }: { isTesteRoute?: boolean 
                                           reader.onloadend = () => handleAddPhoto(idx, reader.result);
                                           reader.readAsDataURL(compressedFile);
                                         } catch (error) {
+                                          console.warn("⚠️ Falha na compressão da imagem principal. Enviando original...", error);
                                           const reader = new FileReader();
                                           reader.onloadend = () => handleAddPhoto(idx, reader.result);
                                           reader.readAsDataURL(file);
